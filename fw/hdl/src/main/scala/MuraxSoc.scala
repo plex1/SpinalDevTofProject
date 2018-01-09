@@ -1,4 +1,4 @@
-package vexriscv.demo
+package soc
 
 import spinal.core._
 import spinal.lib._
@@ -13,6 +13,8 @@ import vexriscv.plugin._
 import vexriscv.{VexRiscv, VexRiscvConfig, plugin}
 
 import scala.collection.mutable.ArrayBuffer
+
+import vexriscv.demo._
 
 /**
   * Created by PIC32F_USER on 28/07/2017.

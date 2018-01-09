@@ -1,4 +1,4 @@
-package demo
+package soc
 
 import spinal.core._
 import spinal.lib.bus.amba3.apb.{Apb3, Apb3SlaveFactory}

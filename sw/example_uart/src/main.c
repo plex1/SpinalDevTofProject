@@ -15,7 +15,7 @@ int main() {
 	uartConfig.dataLength = 8;
 	uartConfig.parity = NONE;
 	uartConfig.stop = ONE;
-	uartConfig.clockDivider = 50000000/8/115200-1;
+	uartConfig.clockDivider = 12000000/8/115200-1;
 	uart_applyConfig(UART,&uartConfig);
 
 	print("Hello !\n");
