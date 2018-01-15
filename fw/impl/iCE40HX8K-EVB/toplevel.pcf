@@ -3,3 +3,9 @@ set_io BUT1 K11
 set_io BUT2 P13
 set_io LED1 M12
 set_io LED2 R16
+set_io jtag_tck E2
+set_io jtag_tms H3
+set_io jtag_tdi G3
+set_io jtag_tdo F3
+set_io uart_txd E3
+set_io uart_rxd H6

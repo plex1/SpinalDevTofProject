@@ -4,7 +4,8 @@ BENCH=no
 MULDIV=no
 
 
-SRCS = 	$(wildcard src/*.c) \
+SRCS =  ../common/lib/crt.S \
+        $(wildcard src/*.c) \
 	$(wildcard src/*.cpp)  \
 	$(wildcard src/*.S)
 
