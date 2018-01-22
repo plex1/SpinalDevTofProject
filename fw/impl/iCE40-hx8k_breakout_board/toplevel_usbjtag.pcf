@@ -1,0 +1,17 @@
+## iCE40-hx8k breakout board (jtag via mounted ftdi and usb)
+
+set_io CLK  J3
+set_io jtag_tck B10    #BDBUS0
+set_io jtag_tdi B12    #BDBUS1
+set_io jtag_tdo B13    #BDBUS2
+set_io jtag_tms A15    #BDBUS3
+set_io uart_txd A7 
+set_io uart_rxd C7
+set_io io_led[0] B5
+set_io io_led[1] B4
+set_io io_led[2] A2
+set_io io_led[3] A1
+set_io io_led[4] C5
+set_io io_led[5] C4
+set_io io_led[6] B3
+set_io io_led[7] C3
