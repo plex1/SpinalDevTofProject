@@ -3,10 +3,10 @@
 VERILOG = ../../hdl/MuraxCustom.v toplevel.v toplevel_pll.v
 
 generate :
-	(cd ../../..; sbt "run-main vexriscv.demo.MuraxWithRamInit")
+	(cd ../../hdl; sbt "run-main soc.MuraxCustom")
 
-../../../Murax.v :
-	(cd ../../..; sbt "run-main vexriscv.demo.MuraxWithRamInit")
+../../hdl/MuraxCustom.v :
+	(cd ../../hdl; sbt "run-main soc.MuraxCustom")
 
 bin/toplevel.blif : ${VERILOG}
 	mkdir -p bin
