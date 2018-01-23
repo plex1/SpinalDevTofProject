@@ -14,9 +14,9 @@ import spinal.lib.com.uart.sim.{UartDecoder, UartEncoder}
 
 object MuraxSim2 {
   def main(args: Array[String]): Unit = {
-    //    def config = MuraxConfig.default.copy(onChipRamSize = 256 kB)
-    def config = MuraxConfig.default.copy(onChipRamSize = 4 kB, onChipRamHexFile = "src/main/ressource/hex/muraxDemo.hex")
-    //def config = MuraxConfig.default.copy(onChipRamSize = 4 kB, onChipRamHexFile = "/home/spinaldev/projects/user/SpinalTemplateSoc/sw/example_uart/build/uart.hex")
+    //def config = MuraxConfig.default.copy(onChipRamSize = 256 kB)
+    //def config = MuraxConfig.default.copy(onChipRamSize = 4 kB, onChipRamHexFile = "src/main/ressource/hex/muraxDemo.hex")
+    def config = MuraxConfig.default.copy(onChipRamSize = 4 kB, onChipRamHexFile = "../../sw/example_uart/build/uart.hex")
 
 
     SimConfig.allOptimisation.compile(new MuraxSoc(config)).doSimUntilVoid{dut =>
