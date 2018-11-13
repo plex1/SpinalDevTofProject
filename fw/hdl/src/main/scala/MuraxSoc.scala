@@ -6,7 +6,7 @@ import spinal.lib.bus.amba3.apb._
 import spinal.lib.bus.misc.SizeMapping
 import spinal.lib.com.jtag.Jtag
 import spinal.lib.com.uart._
-import spinal.lib.io.TriStateArray
+import spinal.lib.io.{InOutWrapper, TriStateArray}
 import spinal.lib.misc.{InterruptCtrl, Prescaler, Timer}
 import spinal.lib.soc.pinsec.{PinsecTimerCtrl, PinsecTimerCtrlExternal}
 import vexriscv.plugin._
@@ -54,20 +54,19 @@ object MuraxConfig{
     pipelineApbBridge     = true,
     gpioWidth = 32,
     cpuPlugins = ArrayBuffer( //DebugPlugin added by the toplevel
-      new PcManagerSimplePlugin(
-        resetVector = 0x00000000l,
-        relaxedPcCalculation = true
-      ),
       new IBusSimplePlugin(
-        interfaceKeepData = false,
-        catchAccessFault = false
+        resetVector = 0x80000000l,
+        relaxedPcCalculation = true,
+        prediction = NONE,
+        catchAccessFault = false,
+        compressedGen = false
       ),
       new DBusSimplePlugin(
         catchAddressMisaligned = false,
         catchAccessFault = false,
         earlyInjection = false
       ),
-      new CsrPlugin(CsrPluginConfig.smallest),
+      new CsrPlugin(CsrPluginConfig.smallest(mtvecInit = 0x80000020l)),
       new DecoderSimplePlugin(
         catchIllegalInstruction = false
       ),
@@ -92,8 +91,7 @@ object MuraxConfig{
       ),
       new BranchPlugin(
         earlyBranch = false,
-        catchAddressMisaligned = false,
-        prediction = NONE
+        catchAddressMisaligned = false
       ),
       new YamlPlugin("cpu0.yaml")
     ),
@@ -143,7 +141,7 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
     //Clocks / reset
     val asyncReset = in Bool
     val mainClk = in Bool
-
+    
     //external apb
     val apbExternal = master(Apb3(
       addressWidth = 8,
@@ -156,7 +154,6 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
     //Peripherals IO
     val gpioA = master(TriStateArray(gpioWidth bits))
     val uart = master(Uart())
-
   }
 
 
@@ -185,6 +182,7 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
     val mainClkReset = RegNext(mainClkResetUnbuffered)
     val systemReset  = RegNext(mainClkResetUnbuffered)
   }
+
 
   val systemClockDomain = ClockDomain(
     clock = io.mainClk,
@@ -278,8 +276,8 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
       slaves = List[(Apb3, SizeMapping)](
         gpioACtrl.io.apb -> (0x00000, 4 kB),
         uartCtrl.io.apb  -> (0x10000, 4 kB),
-        timer.io.apb     -> (0x20000, 4 kB),
-        io.apbExternal   -> (0x30000, 4 kB)
+	timer.io.apb     -> (0x20000, 4 kB),
+	io.apbExternal   -> (0x30000, 4 kB)
       )
     )
 
@@ -287,7 +285,7 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
       val logic = new MuraxSimpleBusDecoder(
         master = mainBusArbiter.io.masterBus,
         specification = List[(SimpleBus,SizeMapping)](
-          ram.io.bus             -> (0x00000000l, onChipRamSize kB),
+          ram.io.bus             -> (0x80000000l, onChipRamSize),
           apbBridge.io.simpleBus -> (0xF0000000l, 1 MB)
         ),
         pipelineMaster = pipelineMainBus
