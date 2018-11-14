@@ -12,7 +12,7 @@ import spinal.lib.com.uart.sim.{UartDecoder, UartEncoder}
 
 
 
-object MuraxSim2 {
+object MuraxSim {
   def main(args: Array[String]): Unit = {
     //def config = MuraxConfig.default.copy(onChipRamSize = 256 kB)
     //def config = MuraxConfig.default.copy(onChipRamSize = 4 kB, onChipRamHexFile = "src/main/ressource/hex/muraxDemo.hex")
