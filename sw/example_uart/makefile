@@ -8,6 +8,8 @@ SRCS =  ../common/lib/crt.S \
         $(wildcard src/*.c) \
 	$(wildcard src/*.cpp)  \
 	$(wildcard src/*.S)
+	
+HDRS = $(wildcard src/*.h)
 
 
 LDSCRIPT = ../common/script/linker.ld

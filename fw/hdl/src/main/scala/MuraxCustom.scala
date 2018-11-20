@@ -29,7 +29,7 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
   }
 
   // Murax Sytem On Chip
-  val murrax = new MuraxSoc(MuraxConfig.default)
+  val murrax = new MuraxSoc(config)
 
   val system = new ClockingArea(murrax.systemClockDomain) {
 

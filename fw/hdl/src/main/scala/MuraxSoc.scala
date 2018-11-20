@@ -276,8 +276,8 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
       slaves = List[(Apb3, SizeMapping)](
         gpioACtrl.io.apb -> (0x00000, 4 kB),
         uartCtrl.io.apb  -> (0x10000, 4 kB),
-	timer.io.apb     -> (0x20000, 4 kB),
-	io.apbExternal   -> (0x30000, 4 kB)
+	      timer.io.apb     -> (0x20000, 4 kB),
+	      io.apbExternal   -> (0x30000, 4 kB)
       )
     )
 

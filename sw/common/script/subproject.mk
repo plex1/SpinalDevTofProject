@@ -51,20 +51,18 @@ $(OBJDIR)/%.elf: $(OBJS) | $(OBJDIR)
 	$(RISCV_OBJCOPY) -O binary $^ $@
 	
 %.v: %.elf
-	$(RISCV_OBJCOPY) -O verilog $^ $@
-	
-	
+	$(RISCV_OBJCOPY) -O verilog $^ $@	
 	
 %.asm: %.elf
 	$(RISCV_OBJDUMP) -S -d $^ > $@
 
-$(OBJDIR)/%.o: %.c
+$(OBJDIR)/%.o: %.c $(HDRS)
 	mkdir -p $(dir $@)
-	$(RISCV_CC) -c $(CFLAGS)  $(INC) -o $@ $^
+	$(RISCV_CC) -c $(CFLAGS)  $(INC) -o $@ $<
 	
-$(OBJDIR)/%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp $(HDRS)
 	mkdir -p $(dir $@)
-	$(RISCV_CC) -c $(CFLAGS)  $(INC) -o $@ $^	
+	$(RISCV_CC) -c $(CFLAGS)  $(INC) -o $@ $<
 
 $(OBJDIR)/%.o: %.S
 	mkdir -p $(dir $@)

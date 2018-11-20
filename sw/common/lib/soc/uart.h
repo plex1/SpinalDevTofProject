@@ -27,6 +27,10 @@ static uint32_t uart_readOccupancy(Uart_Reg *reg){
 	return reg->STATUS >> 24;
 }
 
+static uint32_t uart_read(Uart_Reg *reg){
+	return reg->DATA & 0xFF;
+}
+
 static void uart_write(Uart_Reg *reg, uint32_t data){
 	while(uart_writeAvailability(reg) == 0);
 	reg->DATA = data;

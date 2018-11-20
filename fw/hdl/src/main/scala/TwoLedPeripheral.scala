@@ -17,7 +17,8 @@ class TwoLedPeripheral extends Component {
   val busCtrl = Apb3SlaveFactory(io.apb)
   io.led := (busCtrl.createReadAndWrite(Bits(1 bits), 0x00, 0, "this is the led2") init (0)) === B"1"
   io.led2.setWhen(busCtrl.isWriting(0x00 + 4))
-  busCtrl.driveAndRead(U"8'h1", 0x00 + 8)
+  busCtrl.read(U"h1a", 0x00 + 8)
+  busCtrl.createReadAndWrite(Bits(32 bits), 0x00+12, 0, "this is a test register") init (0)
 
   busCtrl.printDataModel()
 }
