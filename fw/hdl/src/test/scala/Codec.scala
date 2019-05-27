@@ -15,8 +15,8 @@ object CodecFormat {
   // enums
 
   // functions
-  def intToByteArray(d: Int): Array[Byte] = for (i <- (0 to n_bw-1).toArray) yield ((d >> w_byte*i) & 0xff).toByte
-  def ByteArrayToInt(d: Array[Byte]): Int = d.foldRight(0)(_.toInt + (1<< w_byte) * _ )
+  def intToByteArray(d: Int): Array[Byte] = for (i <- (n_bw-1 to 0 by -1).toArray) yield ((d >> w_byte*i) & 0xff).toByte
+  def ByteArrayToInt(d: Array[Byte]): Int = d.foldLeft(0)((1<< w_byte) * _ + _.toInt)
 
   // constructor with byte array
   def apply(in: Array[Byte]): CodecFormat = {
@@ -39,6 +39,7 @@ case class CodecFormat(command:Int, addr:Int, len:Int, data: Array[Byte] = Array
 
     // construct frame
     val frame = idcontrol ++ CodecFormat.intToByteArray(addr) ++ CodecFormat.intToByteArray(len) ++ data
+    println("raw: " + frame.map("%02x".format(_)).mkString(" "))
     frame
   }
 
@@ -60,7 +61,7 @@ case class Codec(Tx: UartEncoderSim, Rx: UartDecoderSim){
     ret
   }
 
-  def MessageAvailable( ) : Boolean ={
+  def MessageAvailable( ) : Boolean = {
     Rx.readQueue.length>=CodecFormat.n_header*CodecFormat.w_byte
   }
 
@@ -73,6 +74,7 @@ case class Codec(Tx: UartEncoderSim, Rx: UartDecoderSim){
 
     // get rx frame
     val rxheader = getMessage(CodecFormat.n_header*CodecFormat.n_bw) // first part
+    println("[INFO] header received")
     val data = if (CodecFormat(rxheader).command == 0) {
       getMessage(CodecFormat(rxheader).len * CodecFormat.n_bw) // data part for the read command
     } else {Array.empty[Byte]}
