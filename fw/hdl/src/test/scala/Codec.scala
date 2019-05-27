@@ -55,7 +55,7 @@ case class Codec(Tx: UartEncoderSim, Rx: UartDecoderSim){
   }
 
   def getMessage(len: Int): Array[Byte]@suspendable = {
-    while (Rx.readQueue.length<len) {sleep(1000)}
+    while (Rx.readQueue.length<len) {sleep(10000000)} //cycles to be defined
     val ret = for (i <- Array.range(0,len)) yield Rx.readQueue.dequeue().toByte
     ret
   }

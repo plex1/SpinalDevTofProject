@@ -7,7 +7,7 @@ import spinal.lib.com.uart.Uart
 import spinal.lib.io.TriStateArray
 import spinal.lib.{master, slave}
 import vexriscv.demo._
-import ledperipherals.TwoLedPeripheral
+import tofperipheral.TofPeripheral
 
 case class MuraxCustom(config : MuraxConfig) extends Component{
   import config._
@@ -26,10 +26,12 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
 
     //Custom Peripheral
     val led = out Bool
+    val trigsOut = out Bits(3 bits)
+    val trigsIn = in Bits(2 bits)
   }
 
   // Murax Sytem On Chip
-  val murrax = new MuraxSoc(config)
+  val murrax = new soc.MuraxSoC(config)
 
   val system = new ClockingArea(murrax.systemClockDomain) {
 
@@ -40,13 +42,16 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
     murrax.io.gpioA <> io.gpioA
     murrax.io.uart <> io.uart
 
-    val twoled = new TwoLedPeripheral()
+    val tof = new TofPeripheral()
 
     // Connect led to toplevel
-    io.led := twoled.io.led
+    io.led := tof.io.led
+
+    io.trigsOut := tof.io.trigsOut
+    tof.io.trigsIn := io.trigsIn
 
     // connect apb
-    twoled.io.apb <> murrax.io.apbExternal
+    tof.io.apb <> murrax.io.apbExternal
 
   }
 

@@ -16,8 +16,10 @@ case class UartDecoderSim(uartPin : Bool, baudPeriod : Long) {
       waitUntil(uartPin.toBoolean == true)
       while (true) {
         fill_queue()
+
       }
     }
+
 
   def fill_queue() : Unit@suspendable = {
     waitUntil(uartPin.toBoolean == false)

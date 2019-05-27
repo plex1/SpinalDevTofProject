@@ -4,17 +4,20 @@ import spinal.core._
 import spinal.lib._
 import spinal.lib.bus.amba3.apb._
 import spinal.lib.bus.misc.SizeMapping
+import spinal.lib.bus.simple.PipelinedMemoryBus
 import spinal.lib.com.jtag.Jtag
+import spinal.lib.com.spi.ddr.SpiXdrMaster
 import spinal.lib.com.uart._
 import spinal.lib.io.{InOutWrapper, TriStateArray}
 import spinal.lib.misc.{InterruptCtrl, Prescaler, Timer}
 import spinal.lib.soc.pinsec.{PinsecTimerCtrl, PinsecTimerCtrlExternal}
 import vexriscv.plugin._
 import vexriscv.{VexRiscv, VexRiscvConfig, plugin}
+import spinal.lib.com.spi.ddr._
+import spinal.lib.bus.simple._
+import vexriscv.demo._
 
 import scala.collection.mutable.ArrayBuffer
-
-import vexriscv.demo._
 
 /**
   * Created by PIC32F_USER on 28/07/2017.
@@ -40,12 +43,19 @@ case class MuraxConfig(coreFrequency : HertzNumber,
                        pipelineApbBridge  : Boolean,
                        gpioWidth          : Int,
                        uartCtrlConfig     : UartCtrlMemoryMappedConfig,
+                       xipConfig          : SpiXdrMasterCtrl.MemoryMappingParameters,
+                       hardwareBreakpointCount : Int,
                        cpuPlugins         : ArrayBuffer[Plugin[VexRiscv]]){
   require(pipelineApbBridge || pipelineMainBus, "At least pipelineMainBus or pipelineApbBridge should be enable to avoid wipe transactions")
+  val genXip = xipConfig != null
+
 }
 
+
+
 object MuraxConfig{
-  def default =  MuraxConfig(
+  def default : MuraxConfig = default(false)
+  def default(withXip : Boolean) =  MuraxConfig(
     coreFrequency         = 12 MHz,
     onChipRamSize         = 8 kB,
     onChipRamHexFile      = null,
@@ -53,10 +63,18 @@ object MuraxConfig{
     pipelineMainBus       = false,
     pipelineApbBridge     = true,
     gpioWidth = 32,
+    xipConfig = ifGen(withXip) (SpiXdrMasterCtrl.MemoryMappingParameters(
+      SpiXdrMasterCtrl.Parameters(8, 12, SpiXdrParameter(2, 2, 1)).addFullDuplex(0,1,false),
+      cmdFifoDepth = 32,
+      rspFifoDepth = 32,
+      xip = SpiXdrMasterCtrl.XipBusParameters(addressWidth = 24, dataWidth = 32)
+    )),
+    hardwareBreakpointCount = if(withXip) 3 else 0,
     cpuPlugins = ArrayBuffer( //DebugPlugin added by the toplevel
       new IBusSimplePlugin(
-        resetVector = 0x80000000l,
-        relaxedPcCalculation = true,
+        resetVector = if(withXip) 0xF001E000l else 0x80000000l,
+        cmdForkOnSecondStage = true,
+        cmdForkPersistence = withXip, //Required by the Xip controller
         prediction = NONE,
         catchAccessFault = false,
         compressedGen = false
@@ -66,7 +84,7 @@ object MuraxConfig{
         catchAccessFault = false,
         earlyInjection = false
       ),
-      new CsrPlugin(CsrPluginConfig.smallest(mtvecInit = 0x80000020l)),
+      new CsrPlugin(CsrPluginConfig.smallest(mtvecInit = if(withXip) 0xE0040020l else 0x80000020l)),
       new DecoderSimplePlugin(
         catchIllegalInstruction = false
       ),
@@ -127,33 +145,34 @@ object MuraxConfig{
       bypassWriteBack = true,
       bypassWriteBackBuffer = true
     )
-    //    config.cpuPlugins(config.cpuPlugins.indexWhere(_.isInstanceOf[LightShifterPlugin])) = new FullBarrielShifterPlugin()
+    //    config.cpuPlugins(config.cpuPlugins.indexWhere(_.isInstanceOf[LightShifterPlugin])) = new FullBarrelShifterPlugin()
 
     config
   }
 }
 
 
-case class MuraxSoc(config : MuraxConfig) extends Component{
+case class MuraxSoC(config : MuraxConfig) extends Component{
   import config._
 
   val io = new Bundle {
     //Clocks / reset
     val asyncReset = in Bool
     val mainClk = in Bool
-    
-    //external apb
+
+    //Main components IO
+    val jtag = slave(Jtag())
+
     val apbExternal = master(Apb3(
       addressWidth = 8,
       dataWidth = 32
     ))
 
-    //Main components IO
-    val jtag = slave(Jtag())
-
     //Peripherals IO
     val gpioA = master(TriStateArray(gpioWidth bits))
     val uart = master(Uart())
+
+    val xip = ifGen(genXip)(master(SpiXdrMaster(xipConfig.ctrl.spi)))
   }
 
 
@@ -197,19 +216,19 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
   )
 
   val system = new ClockingArea(systemClockDomain) {
-    val simpleBusConfig = SimpleBusConfig(
+    val pipelinedMemoryBusConfig = PipelinedMemoryBusConfig(
       addressWidth = 32,
       dataWidth = 32
     )
 
     //Arbiter of the cpu dBus/iBus to drive the mainBus
     //Priority to dBus, !! cmd transactions can change on the fly !!
-    val mainBusArbiter = new MuraxMasterArbiter(simpleBusConfig)
+    val mainBusArbiter = new MuraxMasterArbiter(pipelinedMemoryBusConfig)
 
     //Instanciate the CPU
     val cpu = new VexRiscv(
       config = VexRiscvConfig(
-        plugins = cpuPlugins += new DebugPlugin(debugClockDomain)
+        plugins = cpuPlugins += new DebugPlugin(debugClockDomain, hardwareBreakpointCount)
       )
     )
 
@@ -217,7 +236,9 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
     val timerInterrupt = False
     val externalInterrupt = False
     for(plugin <- cpu.plugins) plugin match{
-      case plugin : IBusSimplePlugin => mainBusArbiter.io.iBus <> plugin.iBus
+      case plugin : IBusSimplePlugin =>
+        mainBusArbiter.io.iBus.cmd <> plugin.iBus.cmd
+        mainBusArbiter.io.iBus.rsp <> plugin.iBus.rsp
       case plugin : DBusSimplePlugin => {
         if(!pipelineDBus)
           mainBusArbiter.io.dBus <> plugin.dBus
@@ -240,59 +261,96 @@ case class MuraxSoc(config : MuraxConfig) extends Component{
 
 
     //****** MainBus slaves ********
-    val ram = new MuraxSimpleBusRam(
+    val mainBusMapping = ArrayBuffer[(PipelinedMemoryBus,SizeMapping)]()
+    val ram = new MuraxPipelinedMemoryBusRam(
       onChipRamSize = onChipRamSize,
       onChipRamHexFile = onChipRamHexFile,
-      simpleBusConfig = simpleBusConfig
+      pipelinedMemoryBusConfig = pipelinedMemoryBusConfig
     )
+    mainBusMapping += ram.io.bus -> (0x80000000l, onChipRamSize)
 
-    val apbBridge = new MuraxSimpleBusToApbBridge(
+    val apbBridge = new PipelinedMemoryBusToApbBridge(
       apb3Config = Apb3Config(
         addressWidth = 20,
         dataWidth = 32
       ),
       pipelineBridge = pipelineApbBridge,
-      simpleBusConfig = simpleBusConfig
+      pipelinedMemoryBusConfig = pipelinedMemoryBusConfig
     )
+    mainBusMapping += apbBridge.io.pipelinedMemoryBus -> (0xF0000000l, 1 MB)
 
 
 
     //******** APB peripherals *********
-    val gpioACtrl = Apb3Gpio(gpioWidth = gpioWidth)
+    val apbMapping = ArrayBuffer[(Apb3, SizeMapping)]()
+    val gpioACtrl = Apb3Gpio(gpioWidth = gpioWidth, withReadSync = true)
     io.gpioA <> gpioACtrl.io.gpio
+    apbMapping += gpioACtrl.io.apb -> (0x00000, 4 kB)
 
     val uartCtrl = Apb3UartCtrl(uartCtrlConfig)
     uartCtrl.io.uart <> io.uart
     externalInterrupt setWhen(uartCtrl.io.interrupt)
+    apbMapping += uartCtrl.io.apb  -> (0x10000, 4 kB)
 
     val timer = new MuraxApb3Timer()
     timerInterrupt setWhen(timer.io.interrupt)
+    apbMapping += timer.io.apb     -> (0x20000, 4 kB)
+
+    apbMapping +=io.apbExternal   -> (0x30000, 4 kB)
+
+    val xip = ifGen(genXip)(new Area{
+      val ctrl = Apb3SpiXdrMasterCtrl(xipConfig)
+      ctrl.io.spi <> io.xip
+      externalInterrupt setWhen(ctrl.io.interrupt)
+      apbMapping += ctrl.io.apb     -> (0x1F000, 4 kB)
+
+      val accessBus = new PipelinedMemoryBus(PipelinedMemoryBusConfig(24,32))
+      mainBusMapping += accessBus -> (0xE0000000l, 16 MB)
+
+      ctrl.io.xip.cmd.valid <> (accessBus.cmd.valid && !accessBus.cmd.write)
+      ctrl.io.xip.cmd.ready <> accessBus.cmd.ready
+      ctrl.io.xip.cmd.payload <> accessBus.cmd.address
+
+      ctrl.io.xip.rsp.valid <> accessBus.rsp.valid
+      ctrl.io.xip.rsp.payload <> accessBus.rsp.data
+
+      val bootloader = Apb3Rom("src/main/c/murax/xipBootloader/crt.bin")
+      apbMapping += bootloader.io.apb     -> (0x1E000, 4 kB)
+    })
 
 
 
     //******** Memory mappings *********
     val apbDecoder = Apb3Decoder(
       master = apbBridge.io.apb,
-      slaves = List[(Apb3, SizeMapping)](
-        gpioACtrl.io.apb -> (0x00000, 4 kB),
-        uartCtrl.io.apb  -> (0x10000, 4 kB),
-	      timer.io.apb     -> (0x20000, 4 kB),
-	      io.apbExternal   -> (0x30000, 4 kB)
-      )
+      slaves = apbMapping
     )
 
     val mainBusDecoder = new Area {
-      val logic = new MuraxSimpleBusDecoder(
+      val logic = new MuraxPipelinedMemoryBusDecoder(
         master = mainBusArbiter.io.masterBus,
-        specification = List[(SimpleBus,SizeMapping)](
-          ram.io.bus             -> (0x80000000l, onChipRamSize),
-          apbBridge.io.simpleBus -> (0xF0000000l, 1 MB)
-        ),
+        specification = mainBusMapping,
         pipelineMaster = pipelineMainBus
       )
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

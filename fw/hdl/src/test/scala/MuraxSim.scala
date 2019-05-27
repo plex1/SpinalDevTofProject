@@ -45,6 +45,7 @@ object MuraxSim {
       )
 
       var ledsValue = 0l
+      var trigValue = 0l
 
       val guiThread = fork{
         val guiToSim = mutable.Queue[Any]()
@@ -62,6 +63,9 @@ object MuraxSim {
             switchValue = switches.getValue
             switches
           }
+          add(new JLedArray(2){
+            override def getValue = trigValue
+          })
 
           add(new JButton("Reset"){
             addActionListener(new ActionListener {
@@ -93,6 +97,7 @@ object MuraxSim {
 
           dut.io.gpioA.read #= (dut.io.gpioA.write.toLong & dut.io.gpioA.writeEnable.toLong) | (switchValue() << 8)
           ledsValue = dut.io.gpioA.write.toLong
+          //trigValue = dut.io.trigs.toLong
           ledsFrame.repaint()
         }
       }

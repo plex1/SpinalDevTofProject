@@ -11,15 +11,27 @@ module toplevel(
     input  jtag_tdi,
     output jtag_tdo,
     output uart_txd,
-    input uart_rxd
+    input uart_rxd,
+    output trigsOut0,
+    output trigsOut1,
+    output trigsOut2,
+    input trigsIn0,
+    input trigsIn1		
   );
 
   assign LED1 = io_gpioA_write[0];
   assign LED2 = io_gpioA_write[5];
-
+  assign trigsOut0 = io_trigsOut[0];
+  assign trigsOut1 = io_trigsOut[1];
+  assign trigsOut2 = io_trigsOut[2];
+  assign io_trigsIn[0] = trigsIn0;
+  assign io_trigsIn[1] = trigsIn1;
+ 
   wire [31:0] io_gpioA_read;
   wire [31:0] io_gpioA_write;
   wire [31:0] io_gpioA_writeEnable;
+  wire [2:0] io_trigsOut;
+  wire [1:0] io_trigsIn; 
   wire mainClk, jtag_tck_buf;
 
   // Use PLL to downclock external clock.
@@ -44,7 +56,9 @@ module toplevel(
     .io_gpioA_write      (io_gpioA_write),
     .io_gpioA_writeEnable(io_gpioA_writeEnable),
     .io_uart_txd(uart_txd),
-    .io_uart_rxd(uart_rxd)
+    .io_uart_rxd(uart_rxd),
+    .io_trigsOut(io_trigsOut),
+    .io_trigsIn(io_trigsIn)	
   );
 
 endmodule
