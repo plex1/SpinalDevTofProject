@@ -7,16 +7,18 @@ module toplevel(
     output LED1,
     output LED2,
     input  jtag_tck,
-    input  jtag_tms,		
+    input  jtag_tms, 
     input  jtag_tdi,
     output jtag_tdo,
     output uart_txd,
-    input uart_rxd,
+    input  uart_rxd,
+    output uart2_txd,
+    input  uart2_rxd, 
     output trigsOut0,
     output trigsOut1,
     output trigsOut2,
-    input trigsIn0,
-    input trigsIn1		
+    input  trigsIn0,
+    input  trigsIn1		
   );
 
   assign LED1 = io_gpioA_write[0];
@@ -57,6 +59,8 @@ module toplevel(
     .io_gpioA_writeEnable(io_gpioA_writeEnable),
     .io_uart_txd(uart_txd),
     .io_uart_rxd(uart_rxd),
+    .io_uart2_txd(uart2_txd),
+    .io_uart2_rxd(uart2_rxd),		      
     .io_trigsOut(io_trigsOut),
     .io_trigsIn(io_trigsIn)	
   );

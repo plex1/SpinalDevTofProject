@@ -37,6 +37,7 @@ int main() {
   uartConfig.stop = ONE;
   uartConfig.clockDivider = 12000000/8/115200-1;
   uart_applyConfig(UART,&uartConfig);
+  uart_applyConfig(UART2,&uartConfig);
 
   GPIO_A->OUTPUT_ENABLE = 0x000000FF;
   GPIO_A->OUTPUT = 0x00000000;
@@ -50,6 +51,7 @@ int main() {
 
   msg_header_t msg_header;
   uint8_t *msg_header_byte = (uint8_t *)&msg_header;
+  uint8_t msg_header_byte2[12];
   uint32_t elem_left = 0;
 
   // statistics
@@ -58,39 +60,63 @@ int main() {
   uint32_t uart_drx[4];
 
 
+   print("Start !\n");
 
-  /*
-    print("Hello !\n");
+   while (uart_readOccupancy(UART2)) {
+         uart_read(UART2);
+   }
+  // while (uart_readOccupancy(UART)) {
+  //       uart_read(UART);
+   //}
 
+/*
     while(1){
     for(uint32_t idx = 'a';idx <= 'z';idx++){
-    for(uint32_t idx = 0;idx < 50000;idx++) asm volatile("");
+    for(uint32_t idx = 0;idx < 200000;idx++) asm volatile("");
     GPIO_A->OUTPUT = (GPIO_A->OUTPUT & ~0x3F) | ((GPIO_A->OUTPUT + 1) & 0x3F);  //Counter on LED[5:0]
     uart_write(UART, idx);
+    uart_write(UART, idx);
+    //uart_write(UART2, idx);
+    //uart_write(UART2, idx);
+    //uart_write(UART2, idx);
     if (uart_readOccupancy(UART)) {
-    uart_write(UART, uart_read(UART));
+      uart_write(UART, uart_read(UART));
+    }
+    if (uart_readOccupancy(UART2)) {
+      uint8_t r;
+      r=uart_read(UART2);
+      uart_write(UART2, r );
+      uart_write(UART2, r);
+    }
+
     }
     }
-    }
-  */
+    */
+
+
+
 
   GPIO_A->OUTPUT = 0x1;
   while(1){
 
-    for(uint32_t idx = 0;idx < 10000;idx++) asm volatile("");
-    GPIO_A->OUTPUT = (GPIO_A->OUTPUT & ~0x3F) | ((GPIO_A->OUTPUT + 1) & 0x3F);  //Counter on LED[5:0]
+    //for(uint32_t idx = 0;idx < 10000;idx++) asm volatile("");
+    //GPIO_A->OUTPUT = (GPIO_A->OUTPUT & ~0x3F) | ((GPIO_A->OUTPUT + 1) & 0x3F);  //Counter on LED[5:0]
 
-    while (uart_readOccupancy(UART) && queueLength<12) {
-      queue_push(uart_read(UART));
-
+    if (uart_readOccupancy(UART2) && queueLength<12) {
+      uint32_t r;
+      r=uart_read(UART2);
+      queue_push(r);
+      print("1");
     }
     if (queueLength>=12){
+      print("Header received !\n");
       GPIO_A->OUTPUT = 0x0;
 
       // get request
       for (int i=0; i<12; i++) {
 	msg_header_byte[i] = queue_pop();
-	elem_left = uart_readOccupancy(UART);
+	msg_header_byte2[i]=msg_header_byte[i];
+	elem_left = uart_readOccupancy(UART2);
 
       }
       n_rx++;
@@ -108,8 +134,8 @@ int main() {
 	msg_header.len = htonl(msg_header.len);
 	msg_header.flags.fields.request = 0;
 	for (int i=0; i<12; i++) {
-	  while (!uart_writeAvailability(UART)) {}
-	  uart_write(UART, msg_header_byte[i]);
+	  while (!uart_writeAvailability(UART2)) {}
+	  uart_write(UART2, msg_header_byte[i]);
 	}
 
 	msg_header.addr = ntohl(msg_header.addr);
@@ -121,8 +147,8 @@ int main() {
 	    uint32_t data = *((uint32_t *) (msg_header.addr + 4*i*msg_header.flags.fields.incr));
 	    data=htonl(data);
 	    for (int j=0; j<4; j++) {
-	      while (!uart_writeAvailability(UART)) {}
-	      uart_write(UART, (data>>8*j) & 0xff);
+	      while (!uart_writeAvailability(UART2)) {}
+	      uart_write(UART2, (data>>8*j) & 0xff);
 	    }
 	  }
 	}
@@ -138,8 +164,8 @@ int main() {
 	msg_header.len = htonl(msg_header.len);
 	msg_header.flags.fields.request = 0;
 	for (int i=0; i<12; i++) {
-	  while (!uart_writeAvailability(UART)) {}
-	  uart_write(UART, msg_header_byte[i]);
+	  while (!uart_writeAvailability(UART2)) {}
+	  uart_write(UART2, msg_header_byte[i]);
 	}
 	msg_header.addr = ntohl(msg_header.addr);
 	msg_header.len = ntohl(msg_header.len);
@@ -149,9 +175,9 @@ int main() {
 	  for (int i=0; i<msg_header.len; i++){
 	    uint32_t data = 0;
 	    for (int j=0; j<4; j++) {
-	      while (!uart_readOccupancy(UART)) {}
+	      while (!uart_readOccupancy(UART2)) {}
 	      for(uint32_t idx = 0;idx < 100;idx++) asm volatile("");
-	      uart_drx[j] = uart_read(UART);
+	      uart_drx[j] = uart_read(UART2);
 	      data = data + (uart_drx[j]<<(j*8));
 	    }
 	    data = ntohl(data);

@@ -23,11 +23,15 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
     //Peripherals IO
     val gpioA = master(TriStateArray(gpioWidth bits))
     val uart = master(Uart())
+    val uart2 = master(Uart())
 
     //Custom Peripheral
     val led = out Bool
     val trigsOut = out Bits(3 bits)
     val trigsIn = in Bits(2 bits)
+
+    val delay = out Bits(6 bits)
+
   }
 
   // Murax Sytem On Chip
@@ -41,6 +45,7 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
     murrax.io.jtag <> io.jtag
     murrax.io.gpioA <> io.gpioA
     murrax.io.uart <> io.uart
+    murrax.io.uart2 <> io.uart2
 
     val tof = new TofPeripheral()
 
@@ -49,6 +54,7 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
 
     io.trigsOut := tof.io.trigsOut
     tof.io.trigsIn := io.trigsIn
+    io.delay := tof.io.delay
 
     // connect apb
     tof.io.apb <> murrax.io.apbExternal

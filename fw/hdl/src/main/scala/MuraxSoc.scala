@@ -171,6 +171,7 @@ case class MuraxSoC(config : MuraxConfig) extends Component{
     //Peripherals IO
     val gpioA = master(TriStateArray(gpioWidth bits))
     val uart = master(Uart())
+    val uart2 = master(Uart())
 
     val xip = ifGen(genXip)(master(SpiXdrMaster(xipConfig.ctrl.spi)))
   }
@@ -291,6 +292,11 @@ case class MuraxSoC(config : MuraxConfig) extends Component{
     uartCtrl.io.uart <> io.uart
     externalInterrupt setWhen(uartCtrl.io.interrupt)
     apbMapping += uartCtrl.io.apb  -> (0x10000, 4 kB)
+
+    val uartCtrl2 = Apb3UartCtrl(uartCtrlConfig)
+    uartCtrl2.io.uart <> io.uart2
+    externalInterrupt setWhen(uartCtrl2.io.interrupt)
+    apbMapping += uartCtrl2.io.apb  -> (0x12000, 4 kB)
 
     val timer = new MuraxApb3Timer()
     timerInterrupt setWhen(timer.io.interrupt)

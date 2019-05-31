@@ -22,6 +22,7 @@
 #define TIMER_A ((Timer_Reg*)0xF0020040)
 #define TIMER_B ((Timer_Reg*)0xF0020050)
 #define UART      ((Uart_Reg*)(0xF0010000))
+#define UART2      ((Uart_Reg*)(0xF0012000))
 #define UART_SAMPLE_PER_BAUD 5
 
 

@@ -35,12 +35,12 @@ object MuraxSim {
       )
 
       val uartRx = UartDecoderSim(
-        uartPin = dut.io.uart.txd,
+        uartPin = dut.io.uart2.txd,
         baudPeriod = uartBaudPeriod
       )
 
       val uartTx = new UartEncoderSim(
-        uartPin = dut.io.uart.rxd,
+        uartPin = dut.io.uart2.rxd,
         baudPeriod = uartBaudPeriod
       )
 
@@ -111,6 +111,8 @@ object MuraxSim {
         val rxmessage1 = codec.transceive(CodecFormat(1, 0xF003000C, 1, Array[Byte](1, 2, 3, 4)))
         val rxmessage2 = codec.transceive(CodecFormat(command = 0, addr = 0xF003000C, len = 4, incr = false))
         val rxmessage3 = codec.transceive(CodecFormat(command = 0, addr = 0xF0030000, len = 4, incr = true))
+        val rxmessage4= codec.transceive(CodecFormat(0, 0xF0030010, 1))
+        val rxmessage5 = codec.transceive(CodecFormat(0, 0xF0030014, 1))
 
       }
     }

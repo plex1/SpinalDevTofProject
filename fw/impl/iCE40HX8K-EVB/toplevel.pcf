@@ -7,8 +7,10 @@ set_io jtag_tck E2
 set_io jtag_tms H3
 set_io jtag_tdi G3
 set_io jtag_tdo F3
-set_io uart_txd E3
-set_io uart_rxd H6
+set_io uart_txd T16
+set_io uart_rxd L11
+set_io uart2_txd E3
+set_io uart2_rxd H6
 set_io trigsOut0 E4
 set_io trigsOut1 B2
 set_io trigsOut2 F5
