@@ -27,7 +27,8 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
 
     //Custom Peripheral
     val led = out Bool
-    val trigsOut = out Bits(3 bits)
+    val trigsOut = out Bits(1
+      bits)
     val trigsIn = in Bits(2 bits)
 
     val delay = out Bits(6 bits)
