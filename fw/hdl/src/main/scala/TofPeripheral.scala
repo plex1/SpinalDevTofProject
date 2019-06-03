@@ -36,21 +36,22 @@ class TofPeripheral extends Component {
   var tofLen = 64
 
   val tofVals = Bits(tofLen bits).noCombLoopCheck
-  val tofRegs = Reg(Bits(tofLen bits)) init(0)
+  val tofRegs = Reg(Bits(32 bits)) init(0)
 
   tofVals(0) := io.trigsIn(0) || io.trigsIn(1)
 
+  // delay line
   for( i <- 1 to tofVals.getWidth-2){
     tofVals(i+1) := !tofVals(i)
   }
   tofVals(1) := !tofVals(0)
 
-  when((tofVals(0) =/= tofRegs(0)) && (tofVals(0) === False)) { //makes no sense
-    tofRegs := tofVals
-  }
+  val dl = new DelayLine(32)
+  dl.io.in_signal := tofVals(0)
+
+  tofRegs(0 until 32) := dl.io.delay_value
 
   busCtrl.read(tofRegs(0 until 32), 0x10)
-  busCtrl.read(tofRegs(32 until 64), 0x14)
 
   val tofRegs2 = Reg(Bits(tofLen bits)) init(0)
   tofRegs2 := tofVals

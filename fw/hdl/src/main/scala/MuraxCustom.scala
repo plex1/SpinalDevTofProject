@@ -8,6 +8,7 @@ import spinal.lib.io.TriStateArray
 import spinal.lib.{master, slave}
 import vexriscv.demo._
 import tofperipheral.TofPeripheral
+import tofperipheral.DelayLine
 
 case class MuraxCustom(config : MuraxConfig) extends Component{
   import config._
@@ -67,10 +68,12 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
 object MuraxCustom{
   def main(args: Array[String]) {
     val config = SpinalConfig()
-    config.generateVerilog({
+    val report = config.generateVerilog({
       val toplevel = new MuraxCustom(MuraxConfig.default)
       toplevel
     })
+    report.mergeRTLSource("mergeRTL")
+
     println("DONE")
   }
 }

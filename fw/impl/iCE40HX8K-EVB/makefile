@@ -1,6 +1,6 @@
 
 
-VERILOG = ../../hdl/MuraxCustom.v toplevel.v toplevel_pll.v
+VERILOG = ../../hdl/MuraxCustom.v toplevel.v toplevel_pll.v ../../hdl/mergeRTL.v
 
 generate :
 	(cd ../../hdl; sbt "run-main soc.MuraxCustom")
