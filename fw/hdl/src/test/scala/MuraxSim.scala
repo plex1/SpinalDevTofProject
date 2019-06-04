@@ -20,7 +20,7 @@ object MuraxSim {
     def config = MuraxConfig.default.copy(onChipRamSize = 8 kB, onChipRamHexFile = "../../sw/example_uart/build/uart.hex")
 
 
-    SimConfig.allOptimisation.compile(new MuraxCustom(config)).doSimUntilVoid{dut =>
+    SimConfig.allOptimisation.withWave.compile(new MuraxCustom(config)).doSimUntilVoid{dut =>
       val mainClkPeriod = (1e12/dut.config.coreFrequency.toDouble).toLong
       val jtagClkPeriod = mainClkPeriod*4
       val uartBaudRate = 115200
@@ -110,10 +110,19 @@ object MuraxSim {
         val rxmessage0 = codec.transceive(CodecFormat(0, 0xF0030008, 1))
         val rxmessage1 = codec.transceive(CodecFormat(1, 0xF003000C, 1, Array[Byte](1, 2, 3, 4)))
         val rxmessage2 = codec.transceive(CodecFormat(command = 0, addr = 0xF003000C, len = 4, incr = false))
-        val rxmessage3 = codec.transceive(CodecFormat(command = 0, addr = 0xF0030000, len = 4, incr = true))
+        val rxmessage3a = codec.transceive(CodecFormat(command = 0, addr = 0xF0030000, len = 4, incr = true))
         val rxmessage4= codec.transceive(CodecFormat(0, 0xF0030010, 1))
         val rxmessage5 = codec.transceive(CodecFormat(0, 0xF0030014, 1))
-
+        val rxmessage6 = codec.transceive(CodecFormat(0, 0xF0030024, 1)) // read trigger finder output
+        val rxmessage7 = codec.transceive(CodecFormat(1, 0xF0030028, 1, Array[Byte](0, 0, 0, 0))) // set to reset mem
+        val rxmessage7d = codec.transceive(CodecFormat(1, 0xF0030028, 1, Array[Byte](0, 0, 0, 1))) // set to record
+        val rxmessage7c = codec.transceive(CodecFormat(1, 0xF0030028, 1, Array[Byte](0, 0, 0, 3))) // set to reset  addrmode
+        val rxmessage7b = codec.transceive(CodecFormat(1, 0xF0030028, 1, Array[Byte](0, 0, 0, 2))) // set to read mode
+        val rxmessage3 = codec.transceive(CodecFormat(command = 0, addr = 0xF003002c, len = 32, incr = false)) // read histogram
+        val rxmessage9= codec.transceive(CodecFormat(0, 0xF003002c, 1))
+        val rxmessage10 = codec.transceive(CodecFormat(0, 0xF003002c, 1))
+        val rxmessage11 = codec.transceive(CodecFormat(0, 0xF003002c, 2))
+        simSuccess()
       }
     }
   }

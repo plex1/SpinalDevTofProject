@@ -70,14 +70,27 @@ class TofPeripheral extends Component {
   io.trigsOut(0) := trigTestValue
 
 
+  // trigger finder
+  val tf = new TriggerFinder(32)
+  val tfRegs = Reg(Bits(32 bits))
+  tfRegs := tofRegs(0 until 32)
+  tf.io.pattern := tfRegs
+  busCtrl.read(tf.io.trigPosition, 0x24, 0)
+  busCtrl.read(tf.io.trigFound, 0x24, 16)
 
+  // histogram
+  val hist = new Histogram(128,32)
 
-
+  // input
+  hist.io.values.payload := tf.io.trigPosition.resized
+  hist.io.values.valid := tf.io.trigFound
+  // set mode
+  busCtrl.driveAndRead(hist.io.mode,0x28,0)
+  //read
+  busCtrl.read(hist.io.readValues, 0x2c, 0)
+  hist.io.readValid := False
+  busCtrl.onRead(0x2c) {hist.io.readValid := True}
 
   busCtrl.printDataModel()
-
-
-
-
 
 }
