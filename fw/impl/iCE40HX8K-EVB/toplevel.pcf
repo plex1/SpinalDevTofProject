@@ -12,6 +12,15 @@ set_io uart_rxd L11
 set_io uart2_txd E3
 set_io uart2_rxd H6
 set_io trigsOut0 E4
-set_io trigsIn0 B1
-set_io trigsIn1 C1
+set_io trigsIn0 D1
+set_io trigsIn1 G4
+set_io delay0 F5
+set_io delay1 J2
+set_io delay2 B1
+set_io delay3 H1
+set_io delay4 C1
+set_io delay5 G1
+set_io delay6 C2
+set_io delay7 J5
+
 

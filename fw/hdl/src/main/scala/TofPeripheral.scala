@@ -4,7 +4,7 @@ import spinal.core._
 import spinal.lib.bus.amba3.apb.{Apb3, Apb3SlaveFactory}
 import spinal.lib.slave // custom apb peripheral
 
-class TofPeripheral extends Component {
+class TofPeripheral (sim : Boolean = false) extends Component {
   val io = new Bundle {
     val apb = slave(Apb3(
       addressWidth = 8,
@@ -14,7 +14,7 @@ class TofPeripheral extends Component {
     val led2 = out Bool
     val trigsOut = out Bits(1 bits)
     val trigsIn = in Bits(2 bits)
-    val delay = out Bits(6 bits)
+    val delay = out Bits(8 bits)
   }
   io.led2 := False
   val busCtrl = Apb3SlaveFactory(io.apb)
@@ -35,29 +35,22 @@ class TofPeripheral extends Component {
 
   var tofLen = 64
 
-  val tofVals = Bits(tofLen bits).noCombLoopCheck
-  val tofRegs = Reg(Bits(32 bits)) init(0)
+  val tofRegs = Reg(Bits(tofLen bits)) init(0)
 
-  tofVals(0) := io.trigsIn(0) || io.trigsIn(1)
+  val trig = Bool
 
-  // delay line
-  for( i <- 1 to tofVals.getWidth-2){
-    tofVals(i+1) := !tofVals(i)
-  }
-  tofVals(1) := !tofVals(0)
+  trig := io.trigsIn(0) || io.trigsIn(1)
 
-  val dl = new DelayLine(32)
-  dl.io.in_signal := tofVals(0)
+  // delayline
+  val dl = if (sim) new DelayLineSim(tofLen)
+  else new DelayLineSim(tofLen)
 
-  tofRegs(0 until 32) := dl.io.delay_value
+  dl.io.in_signal := trig
+  tofRegs := dl.io.delay_value
 
   busCtrl.read(tofRegs(0 until 32), 0x10)
 
-  val tofRegs2 = Reg(Bits(tofLen bits)) init(0)
-  tofRegs2 := tofVals
-  busCtrl.read(tofRegs2(0 until 32), 0x20)
-
-  // implement  test trigger counter
+   // implement  test trigger counter
   val trigTestPeriod = Reg(UInt(5 bits)) init(20)
   busCtrl.readAndWrite(trigTestPeriod, 0x1c, 0,"trig test period")
   val trigTestCounter = Reg(UInt(5 bits))
@@ -71,15 +64,17 @@ class TofPeripheral extends Component {
 
 
   // trigger finder
-  val tf = new TriggerFinder(32)
-  val tfRegs = Reg(Bits(32 bits))
-  tfRegs := tofRegs(0 until 32)
+  val tf = new TriggerFinder(tofLen)
+  val tfRegs = Reg(Bits(tofLen bits))
+  tfRegs := tofRegs
   tf.io.pattern := tfRegs
+  busCtrl.driveAndRead(tf.io.edge,0x28,4)
+  //tf.io.edge := False
   busCtrl.read(tf.io.trigPosition, 0x24, 0)
   busCtrl.read(tf.io.trigFound, 0x24, 16)
 
   // histogram
-  val hist = new Histogram(128,32)
+  val hist = new Histogram(tofLen,32)
 
   // input
   hist.io.values.payload := tf.io.trigPosition.resized

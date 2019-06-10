@@ -1,6 +1,7 @@
 package tofperipheral
 
 import spinal.core._
+import spinal.core.sim._
 
 class DelayLineSim(numElements: Int) extends Component{
 
@@ -11,6 +12,7 @@ class DelayLineSim(numElements: Int) extends Component{
     val delay_value = out Bits(numElements bits)
   }
 
-  io.delay_value := B"32'xa9555555"
+  io.delay_value := B"0101010101010101010101010101101010101010101010101010101010101010"
+  //val delay_value =  Reg(Bits(numElements bits)) init(  B"0101010101010101010101010101101010101010101010101010101010101010" ) simPublic()
 
 }

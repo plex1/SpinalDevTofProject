@@ -21,7 +21,7 @@ bin/toplevel.bin : bin/toplevel.asc
 compile : bin/toplevel.bin
 
 time: bin/toplevel.bin
-	icetime -tmd hx8k bin/toplevel.asc
+	icetime -timd hx8k bin/toplevel.asc -c 40
 
 prog : bin/toplevel.bin
 	iceprogduino bin/toplevel.bin

@@ -56,7 +56,7 @@ case class MuraxConfig(coreFrequency : HertzNumber,
 object MuraxConfig{
   def default : MuraxConfig = default(false)
   def default(withXip : Boolean) =  MuraxConfig(
-    coreFrequency         = 12 MHz,
+    coreFrequency         = 40 MHz,
     onChipRamSize         = 8 kB,
     onChipRamHexFile      = null,
     pipelineDBus          = true,

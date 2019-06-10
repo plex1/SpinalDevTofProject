@@ -10,7 +10,7 @@ import vexriscv.demo._
 import tofperipheral.TofPeripheral
 import tofperipheral.DelayLine
 
-case class MuraxCustom(config : MuraxConfig) extends Component{
+case class MuraxCustom(config : MuraxConfig, sim : Boolean = false) extends Component{
   import config._
 
   val io = new Bundle {
@@ -32,7 +32,7 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
       bits)
     val trigsIn = in Bits(2 bits)
 
-    val delay = out Bits(6 bits)
+    val delay = out Bits(8 bits)
 
   }
 
@@ -49,7 +49,7 @@ case class MuraxCustom(config : MuraxConfig) extends Component{
     murrax.io.uart <> io.uart
     murrax.io.uart2 <> io.uart2
 
-    val tof = new TofPeripheral()
+    val tof = new TofPeripheral(sim)
 
     // Connect led to toplevel
     io.led := tof.io.led
@@ -69,7 +69,9 @@ object MuraxCustom{
   def main(args: Array[String]) {
     val config = SpinalConfig()
     val report = config.generateVerilog({
-      val toplevel = new MuraxCustom(MuraxConfig.default)
+      val toplevel = new MuraxCustom(MuraxConfig.default.copy(onChipRamSize = 8 kB,
+        onChipRamHexFile = "../../sw/example_uart/build/uart.hex")
+      )
       toplevel
     })
     report.mergeRTLSource("mergeRTL")

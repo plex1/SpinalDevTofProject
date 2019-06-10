@@ -8,7 +8,11 @@ lazy val root = (project in file(".")).
     )),
     name := "superproject"
   ).dependsOn(vexRiscv)
-lazy val vexRiscv = RootProject(uri("git://github.com/SpinalHDL/VexRiscv.git"))
+
+//lazy val vexRiscv = RootProject(uri("git://github.com/SpinalHDL/VexRiscv.git"))
+
+//For dependancies localy on your computer :
+lazy val vexRiscv = RootProject(file("./ext/VexRiscv"))//For dependancies localy on your computer :
 
 //If you want a specific git commit : 
 //lazy val vexRiscv = RootProject(uri("git://github.com/SpinalHDL/VexRiscv.git#commitHash"))
@@ -22,6 +26,7 @@ libraryDependencies ++= Seq(
   "org.yaml" % "snakeyaml" % "1.8"
 )
 
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 //addCompilerPlugin("org.scala-lang.plugins" % "scala-continuations-plugin_2.11.6" % "1.0.2")
 //scalacOptions += "-P:continuations:enable"
