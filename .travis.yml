@@ -30,7 +30,7 @@ jobs:
   include:
     - stage: prepare cache-verilator
       script:
-        - cp scripts/regression/verilator.mk $HOME/makefile
+        - cp scripts/verilator.mk $HOME/makefile
         - cd $HOME
         - make verilator_binary
     - &test
