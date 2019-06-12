@@ -56,4 +56,4 @@ cache:
   directories:
     - $HOME/.ivy2/cache
     - $HOME/.sbt
-- $HOME/verilator
+    - $HOME/verilator
