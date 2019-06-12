@@ -3,4 +3,4 @@
 source "./spinaldev.conf"
 cd $SPINALDEV_DIR_HDL
 pwd
-sbt test
+sbt -Dsbt.scala.version=2.10.7 testOnly
