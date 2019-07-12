@@ -2,7 +2,10 @@ package tofperipheral
 
 import spinal.core._
 import spinal.lib.bus.amba3.apb.{Apb3, Apb3SlaveFactory}
+import spinal.lib.bus.misc.{BusSlaveFactoryRead, BusSlaveFactoryWrite}
 import spinal.lib.slave // custom apb peripheral
+
+
 
 class TofPeripheral (sim : Boolean = false) extends Component {
   val io = new Bundle {
@@ -33,7 +36,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   //Instead using a Bits, use a Vec(Bool, 2)
 
 
-  var tofLen = 64
+  var tofLen = if (sim) 64 else 128 //64
 
   val tofRegs = Reg(Bits(tofLen bits)) init(0)
 
@@ -41,14 +44,22 @@ class TofPeripheral (sim : Boolean = false) extends Component {
 
   trig := io.trigsIn(0) || io.trigsIn(1)
 
+
+  // ring oscillator
+  val ro = new RingOscillator(4)
+
   // delayline
-  val dl = if (sim) new DelayLineSim(tofLen)
-  else new DelayLineSim(tofLen)
+  val dl = if (sim) {new DelayLineSim(tofLen)} else {new DelayLine(tofLen)}
 
-  dl.io.in_signal := trig
+  val ro_switch = Bool
+  ro_switch := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 2, "ring osc input selection") init (0)).asBool
+
+  dl.io.in_signal := ro_switch ? ro.io.clk_out | trig
   tofRegs := dl.io.delay_value
+  dl.io.a := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 0, "delayline a") init (0)).asBool
+  dl.io.b := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 1, "delayline b") init (0)).asBool
 
-  busCtrl.read(tofRegs(0 until 32), 0x10)
+  busCtrl.read(tofRegs(0 until List(32, tofLen).min), 0x10)
 
    // implement  test trigger counter
   val trigTestPeriod = Reg(UInt(5 bits)) init(20)
@@ -86,6 +97,41 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   hist.io.readValid := False
   busCtrl.onRead(0x2c) {hist.io.readValid := True}
 
+
   busCtrl.printDataModel()
+
+  def csrPythonString(): String = {
+    val builder = new StringBuilder()
+    builder ++= "#  Configuration and status register definitions for \n"
+    builder ++= "class bsra_csr():\n"
+    builder ++= "    def register(self, addr, name, descr=''):\n"
+    builder ++= "        reg=[] # create empty list\n"
+    builder ++= "        reg.append(addr)\n"
+    builder ++= "        reg.append(name)\n"
+    builder ++= "        return reg\n\n"
+    builder ++= "    def get_reg_list(self):\n\n"
+    builder ++= "        registers=[]\n\n"
+
+    for ((address, tasks) <- busCtrl.elementsPerAddress.toList.sortBy(_._1.lowerBound)) {
+      val task = tasks.head
+      task match {
+        case task: BusSlaveFactoryRead => {
+          builder ++= s"""        registers.append(self.register(${address.lowerBound.toString(16)}, "${task.that.getName()}")) :\n"""
+        }
+        case task: BusSlaveFactoryWrite => {
+          builder ++= s"""        registers.append(self.register(${address.lowerBound.toString(16)}, "${task.that.getName()}")) :\n"""
+        }
+        case _ =>
+      }
+
+    }
+
+    builder ++= s"        return registers\n"
+    builder.toString
+  }
+
+  print(csrPythonString)
+
+
 
 }

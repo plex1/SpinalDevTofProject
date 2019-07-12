@@ -33,7 +33,7 @@ module toplevel(
   wire [31:0] io_gpioA_writeEnable;
   wire [0:0] io_trigsOut;
   wire [1:0] io_trigsIn;
-  wire [5:0] io_delay;
+  wire [7:0] io_delay;
   wire mainClk, jtag_tck_buf;
 
   // Use PLL to downclock external clock.

@@ -35,7 +35,7 @@ int main() {
   uartConfig.dataLength = 8;
   uartConfig.parity = NONE;
   uartConfig.stop = ONE;
-  uartConfig.clockDivider = 12000000/8/115200-1;
+  uartConfig.clockDivider = 40000000/8/115200-1;
   uart_applyConfig(UART,&uartConfig);
   uart_applyConfig(UART2,&uartConfig);
 

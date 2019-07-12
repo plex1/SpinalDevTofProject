@@ -119,6 +119,11 @@ object MuraxSim extends FunSuite{
         val rxmessage2 = codec.transceive(CodecFormat(command = 0, addr = 0xF003000C, len = 4, incr = false))
         assert(rxmessage2.data(0)==0x01020304)
         assert(rxmessage2.data(1)==0x01020304)
+        codec.transceive(CodecFormat(1, 0xF0030018, 1, Array[Int](0x9a))) //delay setting
+        assert(dut.io.delay.toInt == 0x9a)
+        codec.transceive(CodecFormat(1, 0xF0030030, 1, Array[Int](0x3))) //a,b setting
+        val rxmessage_ab = codec.transceive(CodecFormat(command = 0, addr = 0xF0030030, len = 1))
+        assert(rxmessage_ab.data(0)==3)
         val rxmessage3a = codec.transceive(CodecFormat(command = 0, addr = 0xF0030000, len = 4, incr = true))
         val rxmessage4= codec.transceive(CodecFormat(0, 0xF0030010, 1))
         val rxmessage5 = codec.transceive(CodecFormat(0, 0xF0030014, 1))
