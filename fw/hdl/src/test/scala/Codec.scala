@@ -26,9 +26,9 @@ object CodecFormat {
   // constructor with byte array
   def apply(in: Array[Byte]): CodecFormat = {
     val Array(idcontrol, addr, len) = in.grouped(n_bw).take(n_header).toArray.map(x => CodecFormat.byteArrayToInt(x))
-    val incr = if ((idcontrol & 1) == 0) false else true
+    val incr = if ((idcontrol & 2) == 0) false else true
     val command = (idcontrol & (1<<CodecFormat.w_byte)) >> CodecFormat.w_byte
-    val request = (idcontrol & (1 << 1)) >> 1
+    val request = (idcontrol & 1)
     val data = byteArrayToIntArray(in.drop(n_header * n_bw))
     new CodecFormat(command, addr, len, data, incr, request)
   }
@@ -39,7 +39,7 @@ case class CodecFormat(command:Int, addr:Int, len:Int, data: Array[Int] = Array.
 
   def toByteArray: Array[Byte] = {
     // construct header and control bytes
-    val idcval = (CodecFormat.id << (CodecFormat.w_word - CodecFormat.w_byte))+ (command << CodecFormat.w_byte)+ (request <<1) +(if (incr) 1 else 0)
+    val idcval = (CodecFormat.id << (CodecFormat.w_word - CodecFormat.w_byte))+ (command << CodecFormat.w_byte)+ 2*(if (incr) 1 else 0) +(request)
     val idcontrol = CodecFormat.intToByteArray(idcval)
 
     // construct frame

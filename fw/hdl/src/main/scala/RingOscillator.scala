@@ -6,7 +6,7 @@ class RingOscillator(divider: Int) extends BlackBox {
 
   // define verilog generics
   val generic = new Generic {
-    val num_elements = RingOscillator.this.divider
+    val divider = RingOscillator.this.divider
   }
 
   // define verilog ios
@@ -15,7 +15,7 @@ class RingOscillator(divider: Int) extends BlackBox {
   }
 
   noIoPrefix()
-  def filename = "src/main/verilog/ring_oscillator.v"
+  def filename = "src/main/verilog/RingOscillator.v"
   addRTLPath(filename)
 }
 

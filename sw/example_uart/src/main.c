@@ -14,8 +14,8 @@ typedef struct {
   uint8_t command;
   union {
     struct {
-      uint8_t incr : 1;
       uint8_t request : 1;
+      uint8_t incr : 1;      
       uint8_t reserved : 6;
     } fields;
     uint8_t value;

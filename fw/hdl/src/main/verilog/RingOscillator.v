@@ -1,5 +1,5 @@
 
-module ring_oscillator #(parameter divider = 15)(output clk_out);
+module RingOscillator #(parameter divider = 15)(output clk_out);
     localparam N = 31;
     wire [N:0] x;
     assign x[0] = x[N];
@@ -13,6 +13,7 @@ module ring_oscillator #(parameter divider = 15)(output clk_out);
         end
     endgenerate
 
+    wire clk;
     assign clk = x[N];
 
 

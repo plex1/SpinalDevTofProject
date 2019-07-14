@@ -33,6 +33,7 @@ case class MuraxCustom(config : MuraxConfig, sim : Boolean = false) extends Comp
     val trigsIn = in Bits(2 bits)
 
     val delay = out Bits(8 bits)
+    val ro_clk = out Bool
 
   }
 
@@ -57,6 +58,7 @@ case class MuraxCustom(config : MuraxConfig, sim : Boolean = false) extends Comp
     io.trigsOut := tof.io.trigsOut
     tof.io.trigsIn := io.trigsIn
     io.delay := tof.io.delay
+    io.ro_clk := tof.io.ro_clk
 
     // connect apb
     tof.io.apb <> murrax.io.apbExternal

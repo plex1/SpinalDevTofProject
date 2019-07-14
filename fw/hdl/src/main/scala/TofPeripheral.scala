@@ -18,6 +18,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
     val trigsOut = out Bits(1 bits)
     val trigsIn = in Bits(2 bits)
     val delay = out Bits(8 bits)
+    val ro_clk = out Bool
   }
   io.led2 := False
   val busCtrl = Apb3SlaveFactory(io.apb)
@@ -46,7 +47,14 @@ class TofPeripheral (sim : Boolean = false) extends Component {
 
 
   // ring oscillator
-  val ro = new RingOscillator(4)
+  val ro_clk = Bool
+  if (!sim) {
+    val ro = new RingOscillator(5)
+    ro_clk := ro.io.clk_out
+  } else {
+    ro_clk := False
+  }
+  io.ro_clk := ro_clk
 
   // delayline
   val dl = if (sim) {new DelayLineSim(tofLen)} else {new DelayLine(tofLen)}
@@ -54,7 +62,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   val ro_switch = Bool
   ro_switch := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 2, "ring osc input selection") init (0)).asBool
 
-  dl.io.in_signal := ro_switch ? ro.io.clk_out | trig
+  dl.io.in_signal := ro_switch ? ro_clk | trig
   tofRegs := dl.io.delay_value
   dl.io.a := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 0, "delayline a") init (0)).asBool
   dl.io.b := (busCtrl.createReadAndWrite(Bits(1 bits), 0x30, 1, "delayline b") init (0)).asBool
@@ -80,16 +88,22 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   tfRegs := tofRegs
   tf.io.pattern := tfRegs
   busCtrl.driveAndRead(tf.io.edge,0x28,4)
-  //tf.io.edge := False
   busCtrl.read(tf.io.trigPosition, 0x24, 0)
   busCtrl.read(tf.io.trigFound, 0x24, 16)
+
+  // filter
+  val hf = new HistogramFilter(trigTestCounter.getWidth)
+  hf.io.validIn := tf.io.trigFound
+  hf.io.internalCount := trigTestCounter
+  busCtrl.driveAndRead(hf.io.interestedCount, 0x34, 0,"interested cout")
+  busCtrl.driveAndRead(hf.io.filterOn, 0x34, 16,"filterOn")
 
   // histogram
   val hist = new Histogram(tofLen,32)
 
   // input
   hist.io.values.payload := tf.io.trigPosition.resized
-  hist.io.values.valid := tf.io.trigFound
+  hist.io.values.valid := hf.io.validOut
   // set mode
   busCtrl.driveAndRead(hist.io.mode,0x28,0)
   //read
@@ -97,6 +111,11 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   hist.io.readValid := False
   busCtrl.onRead(0x2c) {hist.io.readValid := True}
 
+  // averager
+  val av = new AverageFilter(trigTestCounter.getWidth, 128)
+  av.io.valid := tf.io.trigFound
+  av.io.dataIn := trigTestCounter
+  busCtrl.read(av.io.dataOut, 0x38, 0,"Averager")
 
   busCtrl.printDataModel()
 

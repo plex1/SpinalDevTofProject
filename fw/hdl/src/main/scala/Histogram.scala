@@ -10,7 +10,7 @@ object histogramMode extends SpinalEnum() {
 
 
 class Histogram(numBins: Int, bitWidth : Int) extends Component{
-//class Recorder extends Component{
+
   val io = new Bundle {
     val mode =  in(histogramMode()) //UInt(2 bits)
     val values = slave Flow UInt(log2Up(numBins) bits)
@@ -44,5 +44,46 @@ class Histogram(numBins: Int, bitWidth : Int) extends Component{
     address := address + 1
     mem.write(address = address, data = B(0, bitWidth bits))
   }
+
+}
+
+class HistogramFilter(bitWidth : Int)  extends Component {
+
+  val io = new Bundle {
+    val filterOn = in Bool
+    val validIn = in Bool
+    val validOut = out Bool
+    val internalCount = in UInt(bitWidth bits)
+    val interestedCount = in UInt(bitWidth bits)
+  }
+
+  when ((io.internalCount === io.interestedCount) || !io.filterOn) {
+    io.validOut := io.validIn
+  } otherwise {
+    io.validOut := False
+  }
+
+}
+
+class AverageFilter(bitWidth : Int, decimationFactor : Int)  extends Component {
+
+  val io = new Bundle {
+    val valid = in Bool
+    val dataIn = in UInt(bitWidth bits)
+    val dataOut = out UInt(bitWidth bits)
+  }
+
+  val averageCalc = Reg(UInt((log2Up(decimationFactor) + bitWidth) bits))
+  val averageSaved = Reg(UInt((log2Up(decimationFactor) + bitWidth) bits))
+  val counter = Reg(UInt(log2Up(decimationFactor) bits)) init(0)
+  when (io.valid) {
+    averageCalc := averageCalc + io.dataIn
+    counter := counter + 1
+    when (counter === 0) {
+      averageSaved := averageCalc
+      averageCalc := io.dataIn.resized
+    }
+  }
+  io.dataOut := averageSaved(log2Up(decimationFactor) until averageSaved.getWidth);
 
 }
