@@ -4,6 +4,8 @@ import spinal.core._
 import spinal.lib.bus.amba3.apb.{Apb3, Apb3SlaveFactory}
 import spinal.lib.bus.misc.{BusSlaveFactoryRead, BusSlaveFactoryWrite}
 import spinal.lib.slave // custom apb peripheral
+import CsrProcessing.CsrProcessing
+import CsrProcessing.CsrProcessingConfig
 
 
 
@@ -22,7 +24,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   }
   io.led2 := False
   val busCtrl = Apb3SlaveFactory(io.apb)
-  io.led := (busCtrl.createReadAndWrite(Bits(1 bits), 0x00, 0, "this is the led2") init (0)) === B"1"
+  io.led := (busCtrl.createReadAndWrite(Bits(1 bits), 0x00, 0, "LED - LED - 1> switch LED on") init (0)) === B"1"
   io.led2.setWhen(busCtrl.isWriting(0x00 + 4))
   busCtrl.read(U"h1a", 0x00 + 8)
   busCtrl.createReadAndWrite(Bits(32 bits), 0x00+12, 0, "this is a test register") init (0)
@@ -107,7 +109,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   // set mode
   busCtrl.driveAndRead(hist.io.mode,0x28,0)
   //read
-  busCtrl.read(hist.io.readValues, 0x2c, 0)
+  busCtrl.read(hist.io.readValues, 0x2c, 0, "ReadValues - ReadValues - ")
   hist.io.readValid := False
   busCtrl.onRead(0x2c) {hist.io.readValid := True}
 
@@ -115,42 +117,21 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   val av = new AverageFilter(trigTestCounter.getWidth, 128)
   av.io.valid := tf.io.trigFound
   av.io.dataIn := trigTestCounter
-  busCtrl.read(av.io.dataOut, 0x38, 0,"Averager")
+  busCtrl.read(av.io.dataOut, 0x38, 0,"Reg Name - Field Name - Description\\nLine2") //averager
 
+
+  val csrp = new CsrProcessing(busCtrl, CsrProcessingConfig("TofPeripheral", "Peripheral for measuring time-of-flight with a TDC implemented in FPGA logic"))
+  print(csrp.csrFileString())
+  csrp.toCsrFile("TofPeripheral.json")
   busCtrl.printDataModel()
 
-  def csrPythonString(): String = {
-    val builder = new StringBuilder()
-    builder ++= "#  Configuration and status register definitions for \n"
-    builder ++= "class bsra_csr():\n"
-    builder ++= "    def register(self, addr, name, descr=''):\n"
-    builder ++= "        reg=[] # create empty list\n"
-    builder ++= "        reg.append(addr)\n"
-    builder ++= "        reg.append(name)\n"
-    builder ++= "        return reg\n\n"
-    builder ++= "    def get_reg_list(self):\n\n"
-    builder ++= "        registers=[]\n\n"
 
-    for ((address, tasks) <- busCtrl.elementsPerAddress.toList.sortBy(_._1.lowerBound)) {
-      val task = tasks.head
-      task match {
-        case task: BusSlaveFactoryRead => {
-          builder ++= s"""        registers.append(self.register(${address.lowerBound.toString(16)}, "${task.that.getName()}")) :\n"""
-        }
-        case task: BusSlaveFactoryWrite => {
-          builder ++= s"""        registers.append(self.register(${address.lowerBound.toString(16)}, "${task.that.getName()}")) :\n"""
-        }
-        case _ =>
-      }
-
-    }
-
-    builder ++= s"        return registers\n"
-    builder.toString
-  }
-
-  print(csrPythonString)
-
+  //todo: modify BusSlaveFactory.scala to have a name for each register, per default use the name of the first field
+  //todo: add possibility to at manual name for each field,
+  //  1) with parameter after documentation, 2) sepearte function to set name of field
+  //todo: put csrPythonString in separate package
+  //todo: create yaml csr file according to cern cheby specification
+  //todo: second possibility is to add register name and field name into the documention with predefined fromat
 
 
 }

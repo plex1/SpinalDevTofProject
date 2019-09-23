@@ -25,13 +25,6 @@ class DelayLine(numElements: Int) extends BlackBox with DelayBase{
 
   // define verilog ios
   override val io = new DelayIo(DelayLine.this.numElements)
- /* val io = new Bundle {
-    val clk = in Bool
-    val in_signal= in Bool
-    val delay_value = out Bits(numElements bits)
-    val a = in Bool
-    val b = in Bool
-  }*/
 
   mapClockDomain(clock=io.clk)
   noIoPrefix()
