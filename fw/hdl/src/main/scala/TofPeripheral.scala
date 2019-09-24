@@ -101,7 +101,7 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   val hist = new Histogram(tofLen,32)
   hist.io.values.payload := tf.io.trigPosition.resized
   hist.io.values.valid := hf.io.validOut
-  busCtrl.driveAndRead(hist.io.mode,0x28,0, "control - histMode - 0: RESET_MEM , 1: RECORD, 2: READ, 3: RESET_ADD")
+  busCtrl.driveAndRead(hist.io.mode,0x28,0, "control - histMode - histogram mode - 0: RESET_MEM\\n1: RECORD\\n2: READ\\n3: RESET_ADD")
   busCtrl.read(hist.io.readValues, 0x2c, 0, "- histValues - read histogram value fifo")
 
   hist.io.readValid := False

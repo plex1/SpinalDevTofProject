@@ -27,7 +27,7 @@ case class Access(read: Boolean, write: Boolean) {
 }
 
 
-case class Field(bitOffset: Int, bitWidth: Int, name: String, description: String, access: Access)
+case class Field(bitOffset: Int, bitWidth: Int, name: String, description: String, access: Access, comment: String = "")
 
 case class Register(address: BigInt, name: String, fields : List[Field], access: Access)
 
@@ -81,6 +81,9 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
       s"${field.bitWidth+field.bitOffset-1}-${field.bitOffset}"
     builder ++= s"            range: ${range}\n"
     builder ++= s"            #access: ${field.access}\n"
+    if (field.comment != "") {
+      builder ++= s"            comment: ${'"'}${field.comment}${'"'}\n"
+    }
   }
 
   def addFooterString(builder: StringBuilder){
@@ -121,13 +124,16 @@ class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingCo
 
     var registers = new ListBuffer[Register]()
 
-    case class DocumentationParts(RegName : String, FieldName: String, FieldDescription: String)
+    case class DocumentationParts(RegName : String, FieldName: String, FieldDescription: String, FieldComment: String = "")
 
     def extract_docu(documentation: String) : Option[DocumentationParts] = {
       if (documentation != null) {
         val b = documentation.split("-").map(_.trim)
         if (b != null && b.length>=3) {
-          Some(DocumentationParts(b(0), b(1), b(2)))
+          if (b.length==3)
+            Some(DocumentationParts(b(0), b(1), b(2)))
+          else
+            Some(DocumentationParts(b(0), b(1), b(2), b(3)))
         } else None
       } else None
     }
@@ -144,7 +150,7 @@ class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingCo
             extract_docu(job.documentation) match {
               case Some(docu) => {
                 if (docu.RegName.length()>0) regName = docu.RegName
-                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, false)))
+                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, false), docu.FieldComment))
               }
               case None =>
                 if (config.add_nodocu) Some(Field(job.bitOffset, job.that.getBitsWidth,
@@ -156,7 +162,7 @@ class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingCo
             extract_docu(job.documentation) match {
               case Some(docu) => {
                 if (docu.RegName.length()>0) regName = docu.RegName
-                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, true)))
+                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, true), docu.FieldComment))
               }
               case None =>
                 if (config.add_nodocu) Some(Field(job.bitOffset, job.that.getBitsWidth,
