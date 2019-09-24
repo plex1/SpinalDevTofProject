@@ -31,7 +31,7 @@ case class Field(bitOffset: Int, bitWidth: Int, name: String, description: Strin
 
 case class Register(address: BigInt, name: String, fields : List[Field], access: Access)
 
-case class CsrDefinition(name: String, description: String, registers: List[Register])
+case class CsrDefinition(name: String, description: String, offset: BigInt = 0, registers: List[Register])
 
 abstract class CsrStrings(){
   def addHeaderString(builder: StringBuilder, name: String, description: String)
@@ -50,7 +50,7 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
     builder ++= s"memory-map:\n"
     builder ++= s" bus: wb-32-be\n"
     builder ++= s" name: ${name}\n"
-    builder ++= s" description: ${description}\n"
+    builder ++= s" description: ${'"'}${description}${'"'}\n"
     builder ++= s" children:\n"
 
   }
@@ -75,7 +75,7 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
   def addFieldString(builder: StringBuilder, field: Field): Unit = {
     builder ++= s"        - field:\n"
     builder ++= s"            name: ${field.name}\n"
-    builder ++= s"            description: ${field.description}\n"
+    builder ++= s"            description: ${'"'}${field.description}${'"'}\n"
     builder ++= s"            #offset: ${field.bitOffset}\n"
     val range = if (field.bitWidth==1) s"${field.bitOffset}" else
       s"${field.bitWidth+field.bitOffset-1}-${field.bitOffset}"
@@ -88,12 +88,13 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
   }
 }
 
-case class CsrProcessingConfig(name: String = "None", description: String = "None", addr_inc: Int = 4,
+case class CsrProcessingConfig(name: String = "None", description: String = "None", offset: BigInt = 0, addr_inc: Int = 4,
                                fill_gaps: Boolean = true, nofield_keep : Boolean = false, add_nodocu: Boolean = true)
 
 class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingConfig) {
 
   val reg_width = 32
+  var outputFormat : String = "json"
 
   def addRegisterString(csrStrings: CsrStrings, builder: StringBuilder, register: Register): Unit = {
 
@@ -209,17 +210,21 @@ class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingCo
     }).flatten
 
 
-    val csrDefintion = CsrDefinition(config.name, config.description, regs)
 
-    //json
-    implicit val formats = DefaultFormats
-    val json_string = Serialization.writePretty(csrDefintion)
+    val csrDefintion = CsrDefinition(config.name, config.description, config.offset, regs)
 
-    json_string
+    if (outputFormat == "json")
+    {
+      //json
+      implicit val formats = DefaultFormats
+      val json_string = Serialization.writePretty(csrDefintion)
 
-
-    //cheby
-    //builder.toString
+      json_string
+    } else if (outputFormat == "cheby")
+    {
+      //cheby
+      builder.toString
+    } else {"format not defined"}
 
   }
 
