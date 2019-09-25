@@ -115,12 +115,13 @@ class TofPeripheral (sim : Boolean = false) extends Component {
 
   // generate documentation output
   val csrp = new CsrProcessing(busCtrl, CsrProcessingConfig("TofPeripheral",
-    "Peripheral for measuring time-of-flight with a TDC implemented in FPGA logic",0xF0030010))
+    "Peripheral for measuring time-of-flight with a TDC implemented in FPGA logic",0xF0030000l))
+  csrp.writeCsrFile("TofPeripheral.cheby", "cheby")
+  csrp.writeCsrFile("TofPeripheral_csrp.json", "json_csrp")
+  csrp.writeCsrFile("TofPeripheral_csrp.yaml", "yaml_csrp")
+  csrp.writeCsrFile("TofPeripheral_cheby.json", "json_cheby")
+  csrp.writeCsrFile("TofPeripheral_cheby.yaml", "yaml_cheby")
 
-  csrp.outputFormat = "json"
-  csrp.toCsrFile("TofPeripheral.json")
-  csrp.outputFormat = "cheby"
-  csrp.toCsrFile("TofPeripheral.cheby")
 
   busCtrl.printDataModel()
 

@@ -1,18 +1,19 @@
 package CsrProcessing
 
-import org.json4s._
-import org.json4s.jackson.Serialization  // alternative circe
-//import org.json4s.jackson.Serialization.read
-
+import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+import cats.syntax.either._
+import io.circe.yaml._
+import io.circe.yaml.syntax._
+import io.circe.Printer
 
 import java.io.{File, PrintWriter}
 
-import spinal.lib.bus.amba3.apb.Apb3SlaveFactory
 import spinal.lib.bus.misc.BusSlaveFactoryRead
 import spinal.lib.bus.misc._
 
 import scala.collection.mutable.ListBuffer
 
+// definition of access format
 case class Access(read: Boolean, write: Boolean) {
   override def toString(): String = {
     if (read && !write) "ro"
@@ -21,18 +22,26 @@ case class Access(read: Boolean, write: Boolean) {
     else ""
   }
 
+  // combine several access rights of several data enities is done OR logic
   def orCombine(other: Access): Access = {
     Access(this.read || other.read, this.write || other.write)
   }
 }
 
+// cheby data strucutre definition
+case class ChebyDefinition(`memory-map`: MemoryMap)
+case class MemoryMap(bus: String, name: String, description: String, children: List[RegChildren])
+case class RegChildren(reg: RegCheby)
+case class RegCheby(name: String, width: Int, access: String, children: List[FieldChildren])
+case class FieldChildren(field : FieldCheby)
+case class FieldCheby(name: String, description: String, range: String)
 
-case class Field(bitOffset: Int, bitWidth: Int, name: String, description: String, access: Access, comment: String = "")
-
+// CsrProcessing data structure definition
+case class Field(bitOffset: Int, bitWidth: Int, name: String, description: String, comment: String = "", access: Access)
 case class Register(address: BigInt, name: String, fields : List[Field], access: Access)
+case class CsrpDefinition(name: String, description: String, offset: BigInt = 0, registers: List[Register])
 
-case class CsrDefinition(name: String, description: String, offset: BigInt = 0, registers: List[Register])
-
+// Abstract definition of format to generate files with any format
 abstract class CsrStrings(){
   def addHeaderString(builder: StringBuilder, name: String, description: String)
   def addRegisterStartString(builder: StringBuilder, register: Register)
@@ -43,6 +52,7 @@ abstract class CsrStrings(){
   def addFieldsEndString(builder: StringBuilder, register: Register)
 }
 
+// Definition of format to generate files with Cheby format
 case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
 
   def addHeaderString(builder: StringBuilder, name: String = "None", description: String = "None") = {
@@ -76,34 +86,55 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
     builder ++= s"        - field:\n"
     builder ++= s"            name: ${field.name}\n"
     builder ++= s"            description: ${'"'}${field.description}${'"'}\n"
-    builder ++= s"            #offset: ${field.bitOffset}\n"
     val range = if (field.bitWidth==1) s"${field.bitOffset}" else
       s"${field.bitWidth+field.bitOffset-1}-${field.bitOffset}"
     builder ++= s"            range: ${range}\n"
-    builder ++= s"            #access: ${field.access}\n"
     if (field.comment != "") {
       builder ++= s"            comment: ${'"'}${field.comment}${'"'}\n"
     }
   }
 
-  def addFooterString(builder: StringBuilder){
-    builder ++="#  Configuration and status register definitions end\n"
-  }
+  def addFooterString(builder: StringBuilder){}
 }
 
+// definition of format on how to extract fields from BusSlaveFactory documentation argument
+// Valid Formats: "RegName - FieldName - FieldDescription - FieldComment"
+//                "RegName - FieldName - FieldDescription"
+//                "- FieldName - FormatDescription"      (FieldName will be used as RegName)
+object DocumentationFormat {
+
+  case class DocumentationParts(RegName : String, FieldName: String, FieldDescription: String, FieldComment: String = "")
+
+  def extract_docu(documentation: String) : Option[DocumentationParts] = {
+    if (documentation != null) {
+      val b = documentation.split("-").map(_.trim)
+      if (b != null && b.length>=3) {
+        if (b.length==3)
+          Some(DocumentationParts(b(0), b(1), b(2)))
+        else
+          Some(DocumentationParts(b(0), b(1), b(2), b(3)))
+      } else None
+    } else None
+  }
+
+}
+
+// config of CsrProcessing
 case class CsrProcessingConfig(name: String = "None", description: String = "None", offset: BigInt = 0, addr_inc: Int = 4,
                                fill_gaps: Boolean = true, nofield_keep : Boolean = false, add_nodocu: Boolean = true)
 
-class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingConfig) {
+// main class Csrprocessing
+class CsrProcessing(busCtrl: BusSlaveFactoryDelayed, config : CsrProcessingConfig) {
 
   val reg_width = 32
-  var outputFormat : String = "json"
 
+
+  // helper function
   def addRegisterString(csrStrings: CsrStrings, builder: StringBuilder, register: Register): Unit = {
 
     csrStrings.addRegisterStartString(builder, register)
 
-    if (!register.fields.isEmpty || config.nofield_keep) csrStrings.addFieldsStartString(builder, register)
+    if (register.fields.nonEmpty || config.nofield_keep) csrStrings.addFieldsStartString(builder, register)
 
     // add fields
     for (field <- register.fields) {
@@ -111,132 +142,168 @@ class CsrProcessing(val busCtrl: BusSlaveFactoryDelayed,config : CsrProcessingCo
       csrStrings.addFieldString(builder, field)
     }
 
-    if (!register.fields.isEmpty || config.nofield_keep) csrStrings.addFieldsEndString(builder, register)
+    if (register.fields.nonEmpty || config.nofield_keep) csrStrings.addFieldsEndString(builder, register)
     csrStrings.addRegisterEndString(builder, register)
   }
 
+  // extract list of registers from busCtrl instance
+  def extractRegisters: List[Register] = {
 
-  def csrFileString(): String = {
-    val builder = new StringBuilder()
-    val csrStrings = new CsrChebyStrings(reg_width)
-
-    csrStrings.addHeaderString(builder, config.name , config.description)
-
-    var registers = new ListBuffer[Register]()
-
-    case class DocumentationParts(RegName : String, FieldName: String, FieldDescription: String, FieldComment: String = "")
-
-    def extract_docu(documentation: String) : Option[DocumentationParts] = {
-      if (documentation != null) {
-        val b = documentation.split("-").map(_.trim)
-        if (b != null && b.length>=3) {
-          if (b.length==3)
-            Some(DocumentationParts(b(0), b(1), b(2)))
-          else
-            Some(DocumentationParts(b(0), b(1), b(2), b(3)))
-        } else None
-      } else None
-    }
-
-    var current_addr = 0
+    // convert to list of Register
     val regs = (for ((address, jobs) <- busCtrl.elementsPerAddress.toList.sortBy(_._1.lowerBound)) yield {
 
-      var regName : String = ""
+      var regName: String = ""
 
       // convert to list of Field
       val fields = (for (job <- jobs.filter(j => j.isInstanceOf[BusSlaveFactoryRead] || j.isInstanceOf[BusSlaveFactoryWrite]))
         yield job match {
-          case job: BusSlaveFactoryRead => {
-            extract_docu(job.documentation) match {
-              case Some(docu) => {
-                if (docu.RegName.length()>0) regName = docu.RegName
-                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, false), docu.FieldComment))
-              }
+          case job: BusSlaveFactoryRead =>
+            DocumentationFormat.extract_docu(job.documentation) match {
+              case Some(docu) =>
+                if (docu.RegName.length() > 0) regName = docu.RegName
+                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, docu.FieldComment, Access(true, false)))
               case None =>
                 if (config.add_nodocu) Some(Field(job.bitOffset, job.that.getBitsWidth,
-                  if (job.that.getName()=="") s"NoFieldName${job.bitOffset}" else job.that.getName(), job.documentation, Access(true, false)))
+                  if (job.that.getName() == "") s"NoFieldName${job.bitOffset}" else job.that.getName(), job.documentation, "", Access(true, false)))
                 else None
             }
-          }
-          case job: BusSlaveFactoryWrite => {
-            extract_docu(job.documentation) match {
-              case Some(docu) => {
-                if (docu.RegName.length()>0) regName = docu.RegName
-                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, Access(true, true), docu.FieldComment))
-              }
+          case job: BusSlaveFactoryWrite =>
+            DocumentationFormat.extract_docu(job.documentation) match {
+              case Some(docu) =>
+                if (docu.RegName.length() > 0) regName = docu.RegName
+                Some(Field(job.bitOffset, job.that.getBitsWidth, docu.FieldName, docu.FieldDescription, docu.FieldComment, Access(true, true)))
               case None =>
                 if (config.add_nodocu) Some(Field(job.bitOffset, job.that.getBitsWidth,
-                  if (job.that.getName()=="") s"NoFieldName${job.bitOffset}" else job.that.getName(), job.documentation, Access(true, true)))
+                  if (job.that.getName() == "") s"NoFieldName${job.bitOffset}" else job.that.getName(), job.documentation, "", Access(true, true)))
                 else None
             }
-          }
           case _ => None
         }).toList.flatten
 
       // combine read and write fields
-      val fields_comb = fields.groupBy(_.bitOffset).map{
-        case (k,v) =>
+      val fields_comb = fields.groupBy(_.bitOffset).map {
+        case (k, v) =>
           if (v.size > 1)
-            v(0).copy(access = (v(0).access orCombine v(1).access))// Access(v(0).access.read || v(1).access.read, v(0).access.write || v(1).access.write))
-          else v(0)
+            v.head.copy(access = v.head.access orCombine v(1).access)
+          else v.head
       }.toList.sortBy(_.bitOffset)
 
 
+      // generate Register instance or None
       if (fields_comb.nonEmpty) {
         // find a valid register name if there is none
-        if (regName == "") regName = fields_comb(0).name
+        if (regName == "") regName = fields_comb.head.name
         if (regName == "NoFieldName" || regName == "" || (regName contains "NoFieldName")) regName = s"NoRegName${address.lowerBound.toInt}"
 
-        // fill gaps between registers with dummy registers (required for cheby format)
-        if (config.fill_gaps) {
-          val addr_diff = address.lowerBound.toInt - current_addr
-          if (addr_diff > config.addr_inc) {
-            for (i <- 1 to (addr_diff - config.addr_inc) / config.addr_inc) {
-              addRegisterString(csrStrings, builder, Register(current_addr + i * config.addr_inc,
-                s"Reserved${current_addr + i * config.addr_inc}",
-                List[Field](), Access(true, false)))
-              //List(Field(0, reg_width, "Reserved", "Reserved", Access(false, false))), Access(false, false)))
-            }
-          }
-        }
-        current_addr = address.lowerBound.toInt
-        addRegisterString(csrStrings, builder, Register(current_addr, regName, fields_comb, fields_comb(0).access))
-      }
-
-      csrStrings.addFooterString(builder)
-
-      if (fields_comb.nonEmpty)
         Some(Register(address.lowerBound, regName, fields_comb,
-        if(fields_comb.nonEmpty)
-          (fields_comb.map(_.access).reduceLeft(_ orCombine _))
-        else Access(true, false)))
+          if (fields_comb.nonEmpty)
+            fields_comb.map(_.access).reduceLeft(_ orCombine _)
+          else Access(true, false)))
+      }
       else
         None
 
-    }).flatten
+    }).flatten //flatten removes None Option from list
 
-
-
-    val csrDefintion = CsrDefinition(config.name, config.description, config.offset, regs)
-
-    if (outputFormat == "json")
-    {
-      //json
-      implicit val formats = DefaultFormats
-      val json_string = Serialization.writePretty(csrDefintion)
-
-      json_string
-    } else if (outputFormat == "cheby")
-    {
-      //cheby
-      builder.toString
-    } else {"format not defined"}
+    regs
 
   }
 
-  def toCsrFile(filename:String): Unit ={
+  // generate cheby file string
+  def chebyFileString(regs: List[Register]): String = {
+
+    // Construct Cheby string
+    val chebyBuilder = new StringBuilder()
+    val csrStrings = CsrChebyStrings(reg_width)
+    var current_addr: BigInt = 0
+    csrStrings.addHeaderString(chebyBuilder, config.name , config.description)
+    for (reg <- regs) {
+      if (reg.fields.nonEmpty) {
+        // fill gaps between registers with dummy registers (required for cheby format)
+        if (config.fill_gaps) {
+          val addr_diff = reg.address.toInt - current_addr
+          if (addr_diff > config.addr_inc)
+            for (i <- 1 to ((addr_diff - config.addr_inc) / config.addr_inc).toInt)
+              addRegisterString(csrStrings, chebyBuilder, Register(current_addr + i * config.addr_inc,
+                s"reserved" + f"${current_addr + i * config.addr_inc}%#x",
+                List[Field](), Access(true, false)))
+        }
+        current_addr = reg.address
+        addRegisterString(csrStrings, chebyBuilder, Register(current_addr, reg.name, reg.fields, reg.fields(0).access))
+      }
+    }
+    csrStrings.addFooterString(chebyBuilder)
+
+    chebyBuilder.toString
+
+  }
+
+  // genrate json or yaml string for csrProcessing data structure
+  def csrProcessingFormatFileString(regs: List[Register], outputFormat: String): String = {
+
+    // Construct CsrProcessing data structure
+    val csrpDefintion = CsrpDefinition(config.name, config.description, config.offset, regs)
+
+    // serialize case class
+    outputFormat match {
+      case "json_csrp" => csrpDefintion.asJson.pretty(Printer.indented("  "))
+      case "yaml_csrp" => csrpDefintion.asJson.asYaml.spaces4
+      case _ =>  ""
+    }
+  }
+
+  // second implementation to generate yaml file with cheby format
+  // currently not accepted by the cheby tools due to range field.
+  // yaml has format> range: '7-0', range: '0'
+  // cheby has format> range 7-0, range: 0
+  def chebyFormatFileString(regs: List[Register], outputFormat: String): String = {
+
+    // Construct Cheby data structure
+    val regChildren = for (reg <- regs) yield {
+      val fieldChildren = for (field <- reg.fields) yield {
+        val range = if (field.bitWidth==1) s"${field.bitOffset}" else s"${field.bitWidth+field.bitOffset-1}-${field.bitOffset}"
+        val fieldCheby = FieldCheby(field.name, field.description, range)
+        FieldChildren(fieldCheby)
+      }
+      RegChildren(RegCheby(reg.name, 32, reg.access.toString(), fieldChildren))
+    }
+
+    // cheby format does not save address, thus when there are gaps between registers they have to be insterted
+    val missing_regs = BigInt(-4l)::regs.map(_.address) sliding(2) map { case Seq(x, y, _*) => y - x } map(_.toInt/4 -1) toList
+    val regChildrenStuffed = (for ((regChild, missing) <- regChildren zip missing_regs) yield {
+      val reserved = (for (i <- 0 until missing)
+        yield {RegChildren(RegCheby("reserved", 32, "rw", List[FieldChildren]()))}) toList
+      val reglist = reserved :+ regChild
+      reglist
+    }).flatten
+
+    val chebyDefinition = ChebyDefinition(MemoryMap("wb-32-be", config.name, config.description, regChildrenStuffed))
+
+    // serialize case class
+    outputFormat match {
+      case "json_cheby" => chebyDefinition.asJson.pretty(Printer.indented("  "))//csrDefintion.asJson.noSpaces
+      case "yaml_cheby" => chebyDefinition.asJson.asYaml.spaces4
+      case _ =>  ""
+    }
+
+  }
+
+
+  def csrFileString(regs: List[Register], outputFormat: String): String = {
+
+    outputFormat match {
+      case "json_csrp" | "yaml_csrp" => csrProcessingFormatFileString(regs, outputFormat)
+      case "json_cheby" | "yaml_cheby" => chebyFormatFileString(regs, outputFormat)
+      case "cheby" => chebyFileString(regs)
+      case _ =>  ""
+    }
+  }
+
+
+  def writeCsrFile(filename:String, outputFormat: String = "json"): Unit ={
+    val str =  csrFileString(extractRegisters, outputFormat)
     val pw = new PrintWriter(new File(filename ))
-    pw.write(csrFileString)
+    pw.write(str)
     pw.close()
   }
 }

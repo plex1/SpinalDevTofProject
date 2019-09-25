@@ -27,8 +27,14 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-libraryDependencies += "org.json4s" %% "json4s-native" % "3.4.0"
-libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.4.0"
+//libraryDependencies += "org.json4s" %% "json4s-native" % "3.4.0"
+//libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.4.0"
+
+val circeVersion = "0.11.1"
+libraryDependencies += "io.circe" %% "circe-core" % circeVersion
+libraryDependencies += "io.circe" %% "circe-generic" % circeVersion
+libraryDependencies += "io.circe" %% "circe-parser"% circeVersion
+libraryDependencies += "io.circe" %% "circe-yaml" % "0.10.0"
 
 //addCompilerPlugin("org.scala-lang.plugins" % "scala-continuations-plugin_2.11.6" % "1.0.2")
 //scalacOptions += "-P:continuations:enable"
