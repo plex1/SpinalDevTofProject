@@ -1,10 +1,28 @@
-package CsrProcessing
+package csrProcessing
 
-import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
-import cats.syntax.either._
-import io.circe.yaml._
-import io.circe.yaml.syntax._
-import io.circe.Printer
+// csrProcessing extract the info from BusSlaveFactory into a data interchage format.
+// Supported are: Cheby, JSON and YAML
+//
+// To make the most of this tool the documentation field of the BusSlaveFactory should be formatted
+// with a specific structure. csrProcessing will parse the documentation of it complies with this structure.
+//
+// Format of the BusSlaveFactory documentation argument:
+// Valid Formats: "RegName | FieldName | FieldDescription | FieldComment"
+//                "RegName | FieldName | FieldDescription"
+//                "| FieldName | FormatDescription"      (FieldName will be used as RegName
+//
+//  Definitions (from Cheby):
+// - name: The name of the node. This is required for all nodes (registers, fields)
+// - description: This should be a short text explain the purpose of the node.
+//     This attribute is not required but it is recommended to always provide it.
+// - comment: This is a longer or more detailed text that will be copied into the
+//     generated documentation. New lines are allowed with \n
+//
+//  see CsrProcessingExample.scala for a sample code
+
+
+import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._, io.circe.Printer
+import io.circe.yaml._, io.circe.yaml.syntax._
 
 import java.io.{File, PrintWriter}
 
@@ -68,7 +86,7 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
   def addRegisterStartString(builder: StringBuilder, register: Register): Unit ={
     builder ++= s"  - reg:\n"
     builder ++= s"      name: ${register.name}\n"
-    builder ++= s"      #adddress: ${register.address}\n"
+    builder ++= s"      address: ${register.address}\n"
     builder ++= s"      width: ${reg_width}\n"
     builder ++= s"      access: ${register.access}\n"
 
@@ -90,7 +108,9 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
       s"${field.bitWidth+field.bitOffset-1}-${field.bitOffset}"
     builder ++= s"            range: ${range}\n"
     if (field.comment != "") {
-      builder ++= s"            comment: ${'"'}${field.comment}${'"'}\n"
+      builder ++= s"            comment: ${'"'}${
+        field.comment.replace("\n", "\\n")
+      }${'"'}\n"
     }
   }
 
@@ -98,16 +118,13 @@ case class CsrChebyStrings(reg_width : Int) extends CsrStrings{
 }
 
 // definition of format on how to extract fields from BusSlaveFactory documentation argument
-// Valid Formats: "RegName - FieldName - FieldDescription - FieldComment"
-//                "RegName - FieldName - FieldDescription"
-//                "- FieldName - FormatDescription"      (FieldName will be used as RegName)
 object DocumentationFormat {
 
   case class DocumentationParts(RegName : String, FieldName: String, FieldDescription: String, FieldComment: String = "")
 
   def extract_docu(documentation: String) : Option[DocumentationParts] = {
     if (documentation != null) {
-      val b = documentation.split("-").map(_.trim)
+      val b = documentation.split('|').map(_.trim)
       if (b != null && b.length>=3) {
         if (b.length==3)
           Some(DocumentationParts(b(0), b(1), b(2)))
@@ -215,22 +232,10 @@ class CsrProcessing(busCtrl: BusSlaveFactoryDelayed, config : CsrProcessingConfi
     // Construct Cheby string
     val chebyBuilder = new StringBuilder()
     val csrStrings = CsrChebyStrings(reg_width)
-    var current_addr: BigInt = 0
     csrStrings.addHeaderString(chebyBuilder, config.name , config.description)
     for (reg <- regs) {
-      if (reg.fields.nonEmpty) {
-        // fill gaps between registers with dummy registers (required for cheby format)
-        if (config.fill_gaps) {
-          val addr_diff = reg.address.toInt - current_addr
-          if (addr_diff > config.addr_inc)
-            for (i <- 1 to ((addr_diff - config.addr_inc) / config.addr_inc).toInt)
-              addRegisterString(csrStrings, chebyBuilder, Register(current_addr + i * config.addr_inc,
-                s"reserved" + f"${current_addr + i * config.addr_inc}%#x",
-                List[Field](), Access(true, false)))
-        }
-        current_addr = reg.address
-        addRegisterString(csrStrings, chebyBuilder, Register(current_addr, reg.name, reg.fields, reg.fields(0).access))
-      }
+      if (reg.fields.nonEmpty)
+        addRegisterString(csrStrings, chebyBuilder, Register(reg.address, reg.name, reg.fields, reg.fields(0).access))
     }
     csrStrings.addFooterString(chebyBuilder)
 
@@ -268,16 +273,7 @@ class CsrProcessing(busCtrl: BusSlaveFactoryDelayed, config : CsrProcessingConfi
       RegChildren(RegCheby(reg.name, 32, reg.access.toString(), fieldChildren))
     }
 
-    // cheby format does not save address, thus when there are gaps between registers they have to be insterted
-    val missing_regs = BigInt(-4l)::regs.map(_.address) sliding(2) map { case Seq(x, y, _*) => y - x } map(_.toInt/4 -1) toList
-    val regChildrenStuffed = (for ((regChild, missing) <- regChildren zip missing_regs) yield {
-      val reserved = (for (i <- 0 until missing)
-        yield {RegChildren(RegCheby("reserved", 32, "rw", List[FieldChildren]()))}) toList
-      val reglist = reserved :+ regChild
-      reglist
-    }).flatten
-
-    val chebyDefinition = ChebyDefinition(MemoryMap("wb-32-be", config.name, config.description, regChildrenStuffed))
+    val chebyDefinition = ChebyDefinition(MemoryMap("wb-32-be", config.name, config.description, regChildren))
 
     // serialize case class
     outputFormat match {
