@@ -56,7 +56,7 @@ case class FieldCheby(name: String, description: String, range: String)
 
 // CsrProcessing data structure definition
 case class Field(bitOffset: Int, bitWidth: Int, name: String, description: String, comment: String = "", access: Access)
-case class Register(address: BigInt, name: String, fields : List[Field], access: Access)
+case class Register(address: Int, name: String, fields : List[Field], access: Access)
 case class CsrpDefinition(name: String, description: String, offset: BigInt = 0, registers: List[Register])
 
 // Abstract definition of format to generate files with any format
@@ -212,7 +212,7 @@ class CsrProcessing(busCtrl: BusSlaveFactoryDelayed, config : CsrProcessingConfi
         if (regName == "") regName = fields_comb.head.name
         if (regName == "NoFieldName" || regName == "" || (regName contains "NoFieldName")) regName = s"NoRegName${address.lowerBound.toInt}"
 
-        Some(Register(address.lowerBound, regName, fields_comb,
+        Some(Register(address.lowerBound.toInt, regName, fields_comb,
           if (fields_comb.nonEmpty)
             fields_comb.map(_.access).reduceLeft(_ orCombine _)
           else Access(true, false)))

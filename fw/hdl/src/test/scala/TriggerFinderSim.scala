@@ -6,7 +6,7 @@ import spinal.core.sim._
 
 import org.scalatest.FunSuite
 
-class TrigFinderTests extends FunSuite {
+class TriggerFinderSim extends FunSuite {
 
   // RTL to simulate
   val numTaps = 32

@@ -7,12 +7,14 @@ class TriggerFinder(numElements: Int) extends Component{
   val io = new Bundle {
     val pattern= in Bits(numElements bits)
     val edge = in Bool
-    val trigState = out Bool
+    val trigStateBottom = out Bool
+    val trigStateTop = out Bool
     val trigFound = out Bool
     val trigPosition = out UInt(log2Up(numElements) bits)
   }
 
-  io.trigState := io.pattern(0)
+  io.trigStateBottom := io.pattern(0)
+  io.trigStateTop := !io.pattern(numElements-1)
   io.trigPosition := 0
   if (numElements == 2) {
     io.trigFound := False
@@ -33,7 +35,7 @@ class TriggerFinder(numElements: Int) extends Component{
     } elsewhen tf2.io.trigFound {
       io.trigPosition := tf2.io.trigPosition.resized
       io.trigPosition(log2Up(numElements/2)) := True //+ numElements/2
-    } elsewhen (tf1.io.trigState =/= tf2.io.trigState && tf1.io.trigState === io.edge) {
+    } elsewhen (tf1.io.trigStateTop =/= tf2.io.trigStateBottom && tf1.io.trigStateTop=== io.edge) {
       io.trigFound := True
       io.trigPosition := numElements/2
     }

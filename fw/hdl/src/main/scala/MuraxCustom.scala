@@ -28,8 +28,9 @@ case class MuraxCustom(config : MuraxConfig, sim : Boolean = false) extends Comp
 
     //Custom Peripheral
     val led = out Bool
-    val trigsOut = out Bits(1
-      bits)
+    val trigsOut = out Bits(1 bits)
+    val lockin1Out = out Bool
+    val lockin2Out = out Bool
     val trigsIn = in Bits(2 bits)
 
     val delay = out Bits(8 bits)
@@ -56,6 +57,8 @@ case class MuraxCustom(config : MuraxConfig, sim : Boolean = false) extends Comp
     io.led := tof.io.led
 
     io.trigsOut := tof.io.trigsOut
+    io.lockin1Out := tof.io.lockin1Out
+    io.lockin2Out := tof.io.lockin2Out
     tof.io.trigsIn := io.trigsIn
     io.delay := tof.io.delay
     io.ro_clk := tof.io.ro_clk

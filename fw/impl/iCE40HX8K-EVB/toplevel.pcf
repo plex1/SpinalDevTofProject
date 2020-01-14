@@ -14,6 +14,8 @@ set_io uart2_rxd H6
 set_io trigsOut0 E4
 set_io trigsIn0 D1
 set_io trigsIn1 G4
+set_io lockin1Out D2
+set_io lockin2Out J4
 set_io delay0 F4
 set_io delay1 J2
 set_io delay2 B1

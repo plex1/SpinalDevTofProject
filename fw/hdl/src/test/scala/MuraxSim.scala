@@ -138,6 +138,9 @@ object MuraxSim extends FunSuite{
         val rxmessage4= codec.transceive(CodecFormat(0, 0xF0030010, 1))
         val rxmessage5 = codec.transceive(CodecFormat(0, 0xF0030014, 1))
 
+        // turn off histogram filter
+        val rxmessage5b = codec.transceive(CodecFormat(0, 0xF0030034, 0))
+
         // trigger finder
         val rxmessage52 =codec.transceive(CodecFormat(1, 0xF0030028, 1, Array[Int](0*1))) // set edge
         val rxmessage6 = codec.transceive(CodecFormat(0, 0xF0030024, 1)) // read trigger finder output

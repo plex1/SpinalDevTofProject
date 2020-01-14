@@ -18,6 +18,8 @@ class TofPeripheral (sim : Boolean = false) extends Component {
     val led = out Bool
     val led2 = out Bool
     val trigsOut = out Bits(1 bits)
+    val lockin1Out = out Bool
+    val lockin2Out = out Bool
     val trigsIn = in Bits(2 bits)
     val delay = out Bits(8 bits)
     val ro_clk = out Bool
@@ -68,18 +70,26 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   busCtrl.read(tofRegs(0 until List(32, tofLen).min), 0x10, 0, "| tofReg | First 32 taps of delay line | LSB is first tap in delayline")
 
    // implement  test trigger counter
-  val trigTestPeriod = Reg(UInt(5 bits)) init(20)
-  busCtrl.readAndWrite(trigTestPeriod, 0x1c, 0,"| trigTestPeriod | period of the trigger signal output | 0-63 : step size (LSB) = 25ns")
 
-  // generate internal trigger
-  val trigTestCounter = Reg(UInt(5 bits))
-  val trigTestValue = Reg(Bool)
-  trigTestCounter := trigTestCounter + 1
-  when (trigTestCounter >= trigTestPeriod) {
-    trigTestCounter := 0
-    trigTestValue := !trigTestValue
-  }
-  io.trigsOut(0) := trigTestValue
+  val numBitsSync = 12
+  val sq = new Sequencer(numBitsSync)
+
+  val trigTestPeriod = Reg(UInt(numBitsSync bits)) init(20)
+  busCtrl.readAndWrite(trigTestPeriod, 0x1c, 0,"| trigTestPeriod | period of the trigger signal output | 0-2**12-1 : step size (LSB) = 25ns")
+
+  busCtrl.driveAndRead(sq.io.lockin_sync1_start, 0x40, 0,"| lockin_sync1_start | start position of Sync1 | 0-2**12-1  : step size (LSB) = 25ns")
+  busCtrl.driveAndRead(sq.io.lockin_sync1_end, 0x44, 0,"| lockin_sync1_end | end position of Sync1 | 0-2**12-1  : step size (LSB) = 25ns")
+  busCtrl.driveAndRead(sq.io.lockin_sync2_start, 0x48, 0,"| lockin_sync2_start | start position of Sync2 | 0-2**12-1  : step size (LSB) = 25ns")
+  busCtrl.driveAndRead(sq.io.lockin_sync2_end, 0x4c, 0,"| lockin_sync2_end | end position of Sync2  | 0-2**12-1  : step size (LSB) = 25ns")
+  busCtrl.driveAndRead(sq.io.trigOn,0x28, 6, "control | trigOn | enable trigger output | 0: Off\n1: On")
+  busCtrl.driveAndRead(sq.io.syncOn,0x28, 7, "control | syncOn | enable sync1 and sync2 output | 0: Off\n1: On")
+
+  sq.io.period := trigTestPeriod
+
+
+  io.trigsOut(0) := sq.io.trig
+  io.lockin1Out := sq.io.sync1
+  io.lockin2Out := sq.io.sync2
 
   // trigger finder
   val tf = new TriggerFinder(tofLen)
@@ -91,12 +101,14 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   busCtrl.read(tf.io.trigFound, 0x24, 16, "trigPosition | trigPositionFound | A trigger has been captured | 1: found\n0: not found")
 
   // filter
-  val hf = new HistogramFilter(trigTestCounter.getWidth)
+  val hf = new HistogramFilter(sq.io.seqeunceCounter.getWidth)
   hf.io.validIn := tf.io.trigFound
-  hf.io.internalCount := trigTestCounter
+  hf.io.internalCount := sq.io.seqeunceCounter
   busCtrl.driveAndRead(hf.io.interestedCount, 0x34, 0,
     "histogramFilter | interestedCout | Select which slot should be gated\nNumber of 25ns periods after the trigger output\n only enabled if filterOn=1")
   busCtrl.driveAndRead(hf.io.filterOn, 0x34, 16,"histogramFilter | filterOn | gating active (see interestedCout)")
+  // drive And Read, apparently not initialized to 0
+  val reg3 = RegInit(U"0000")
 
   // histogram
   val hist = new Histogram(tofLen,32)
@@ -109,17 +121,17 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   busCtrl.onRead(0x2c) {hist.io.readValid := True}
 
   // averager
-  val av = new AverageFilter(trigTestCounter.getWidth, 128)
+  val av = new AverageFilter(sq.io.seqeunceCounter.getWidth, 128)
   av.io.valid := tf.io.trigFound
-  av.io.dataIn := trigTestCounter
+  av.io.dataIn := sq.io.seqeunceCounter
   busCtrl.read(av.io.dataOut, 0x38, 0," | averageFilter | Slot position of the received trigger signal (averaged)")
 
   // generate documentation output
   val csrp = new CsrProcessing(busCtrl, CsrProcessingConfig("TofPeripheral",
     "Peripheral for measuring time-of-flight with a TDC implemented in FPGA logic",0xF0030000l))
   csrp.writeCsrFile("TofPeripheral.cheby", "cheby")
-  csrp.writeCsrFile("TofPeripheral_csrp.json", "json_csrp")
-  csrp.writeCsrFile("TofPeripheral_csrp.yaml", "yaml_csrp")
+  csrp.writeCsrFile("TofPeripheral.json", "json_csrp")
+  csrp.writeCsrFile("TofPeripheral.yaml", "yaml_csrp")
   csrp.writeCsrFile("TofPeripheral_cheby.json", "json_cheby")
   csrp.writeCsrFile("TofPeripheral_cheby.yaml", "yaml_cheby")
 

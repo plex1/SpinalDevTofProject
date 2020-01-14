@@ -18,7 +18,9 @@ module toplevel(
     input  trigsIn0,
     input  trigsIn1,
     output delay0, delay1, delay2, delay3, delay4, delay5, delay6, delay7,
-    output io_ro_clk
+    output io_ro_clk,
+    output lockin1Out,
+    output lockin2Out
   );
 
   assign LED1 = io_gpioA_write[0];
@@ -65,7 +67,9 @@ module toplevel(
     .io_trigsOut(io_trigsOut),
     .io_trigsIn(io_trigsIn),
     .io_delay(io_delay),
-    .io_ro_clk(io_ro_clk)
+    .io_ro_clk(io_ro_clk),
+    .io_lockin1Out(lockin1Out),
+    .io_lockin2Out(lockin2Out)
   );
 
 endmodule
