@@ -29,7 +29,11 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 
 ## Remarks
 
-This repos was adopted from [SpinalDevTemplateSoc](https://github.com/plex1/SpinalDevTemplateSoc)
-Tested on [FPGA board (Olimex)](https://www.olimex.com/Products/FPGA/iCE40/iCE40HX8K-EVB/open-source-hardware)
-Programming and debugging of FPGA/SW has been done according to [raspice40](https://github.com/plex1/raspice40)
+- This repos was adopted from [SpinalDevTemplateSoc](https://github.com/plex1/SpinalDevTemplateSoc)
+- Tested on [FPGA board (Olimex)](https://www.olimex.com/Products/FPGA/iCE40/iCE40HX8K-EVB/open-source-hardware)
+- Programming and debugging of FPGA/SW has been done with a Raspberry Pi, see [raspice40](https://github.com/plex1/raspice40). The follwing commands have been used:
+```
+./project.bash run -n SpinalDevTofProject -t soc -a configfile_copy
+./project.bash run -n SpinalDevTofProject -t soc -a configfile_prog
+```
 
