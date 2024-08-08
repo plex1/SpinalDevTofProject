@@ -13,8 +13,8 @@ This repository includes the code for a FPGA on the [ioda_lidar](https://github.
 
 ## Compilation and testing
 
-1. Startup [SpinalDev](https://github.com/plex1/SpinalDev) environment.
-2. Within docker clone this repository into the user folder:
+1. Startup [SpinalDev](https://github.com/plex1/SpinalDev) docker environment.
+2. Within docker, clone this repository into the user folder:
 ```
 cd /home/spinaldev/projects/user
 git clone https://github.com/plex1/SpinalDevTof.git   
