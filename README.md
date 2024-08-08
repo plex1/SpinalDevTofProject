@@ -1,4 +1,4 @@
-# SpinalDevTof
+# SpinalDevTofProject
 
 This repository includes the code for a FPGA on the [ioda_lidar](https://github.com/plex1/ioda_lidar) project. 
 - Logicware
@@ -17,13 +17,13 @@ This repository includes the code for a FPGA on the [ioda_lidar](https://github.
 2. Within docker, clone this repository into the user folder:
 ```
 cd /home/spinaldev/projects/user
-git clone https://github.com/plex1/SpinalDevTof.git   
+git clone https://github.com/plex1/SpinalDevTofProject.git   
 ```
 3. Run project specific actions
 ```
-./project.bash run -n SpinalDevTof -t soc -a fwcompile  # compile hdl and generate verilog
-./project.bash run -n SpinalDevTof -t soc -a swbuild    # build sw and and genrate binary
-./project.bash run -n SpinalDevTof -t soc -a fwtest     # run testbench (needs sw binary)
+./project.bash run -n SpinalDevTofProject -t soc -a fwcompile  # compile hdl and generate verilog
+./project.bash run -n SpinalDevTofProject -t soc -a swbuild    # build sw and and genrate binary
+./project.bash run -n SpinalDevTofProject -t soc -a fwtest     # run testbench (needs sw binary)
 ```
 
 
