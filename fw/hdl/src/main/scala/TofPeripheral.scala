@@ -83,6 +83,8 @@ class TofPeripheral (sim : Boolean = false) extends Component {
   busCtrl.driveAndRead(sq.io.lockin_sync2_end, 0x4c, 0,"| lockin_sync2_end | end position of Sync2  | 0-2**12-1  : step size (LSB) = 25ns")
   busCtrl.driveAndRead(sq.io.trigOn,0x28, 6, "control | trigOn | enable trigger output | 0: Off\n1: On")
   busCtrl.driveAndRead(sq.io.syncOn,0x28, 7, "control | syncOn | enable sync1 and sync2 output | 0: Off\n1: On")
+  busCtrl.driveAndRead(sq.io.trig_length, 0x50, 0,"| trig_length | length of trig signal | 0: 50% duty cycle, 1-2**12-1  : step size (LSB) = 25ns")
+  busCtrl.driveAndRead(sq.io.trigInvert,0x28, 5, "control | trigInvert | ivnert trigger output | 0: Off\n1: On")
 
   sq.io.period := trigTestPeriod
 

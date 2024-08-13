@@ -9,8 +9,10 @@ class Sequencer(numBits: Int) extends Component{
     val lockin_sync1_end = in UInt(numBits bits)
     val lockin_sync2_start = in UInt(numBits bits)
     val lockin_sync2_end = in UInt(numBits bits)
+    val trig_length = in UInt(numBits bits)
     val trigOn = in Bool
     val syncOn = in Bool
+    val trigInvert = in Bool
     val trig = out Bool
     val sync1 = out Bool
     val sync2 = out Bool
@@ -33,7 +35,11 @@ class Sequencer(numBits: Int) extends Component{
   when (trigTestCounter === 0) {
     trigTestValue := True
   }
-  when (trigTestCounter === (io.period>>1)) {
+  when (trigTestCounter === (io.period>>1)  ) {
+    trigTestValue := False
+  }
+
+  when ( (io.trig_length(0 to 4) =/= 0) && (trigTestCounter(0 to 4) === io.trig_length(0 to 4))){
     trigTestValue := False
   }
 
@@ -53,10 +59,10 @@ class Sequencer(numBits: Int) extends Component{
     sync2:=False
   }
 
-  io.sync1 := Mux(io.syncOn, sync1, False)
-  io.sync2 := Mux(io.syncOn, sync2, False)
-  io.trig := Mux(io.trigOn, trigTestValue, False)
-  io.seqeunceCounter := trigTestCounter
-
+  io.sync1 := RegNext(Mux(io.syncOn, sync1, False))
+  io.sync2 := RegNext(Mux(io.syncOn, sync2, False))
+  val trigMuxInvert = Mux(io.trigInvert,!trigTestValue, trigTestValue)
+  io.trig := RegNext(Mux(io.trigOn, trigMuxInvert, False))
+  io.seqeunceCounter := RegNext(trigTestCounter)
 
 }
