@@ -1,6 +1,6 @@
 # SpinalDevTofProject
 
-This repository includes the code for a FPGA on the [ioda_lidar](https://github.com/plex1/ioda_lidar) project. 
+This repository includes the code for the FPGA in the [ioda_lidar](https://github.com/plex1/ioda_lidar) project:
 - Logicware
   - RiscV ([VexRiscv](https://github.com/SpinalHDL/VexRiscv)) softcore CPU
   - Time-of-flight 
