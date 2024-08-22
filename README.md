@@ -48,6 +48,8 @@ A block diagram of the system is shown in Figure 1. The setup is controlled by a
 
 ![System Level Block Diagram](./resources/tdc_proto.png)
 
+*Figure 1: System Level Block Diagram*
+
 The separate units are described in Table 1. A photo of the setup is shown in Figure 2, which shows an aluminum plate with the FTDI, RPi3, FPGA board, and proto board mounted. The TofUpgrade PCB is shown on the right.
 
 | Unit            | Description                         |
@@ -62,6 +64,8 @@ The separate units are described in Table 1. A photo of the setup is shown in Fi
 *Table 1: Units in System Setup*
 
 ![Photo of the setup](./resources/foto_setup.png)
+
+*Figure 2: Photo of setup*
 
 ## PC
 ### Design Software
@@ -104,21 +108,29 @@ In Figure 3, the block diagram of the FPGA logic is shown. The control and statu
 
 ![FPGA Block Diagram](./resources/tdc_fpga.png)
 
+*Figure 3: FPGA Block Diagram*
+
 ## Ring Oscillator
 The ring oscillator is generated with the logic primitive LUT4 (see [4]), which is configured to forward the input I1 to the output O (buffer). This output is divided by 32 by using an adder to generate a signal in the order of 1 MHz.
 
 ![Ring Oscillator Logic](./resources/ring_oscillator.png)
+
+*Figure 4: Ring Oscillator Logic*
 
 ## Tapped Delay Line
 The tapped delay line is generated with the logic primitive LUT4 and DFF (see [4]). The delay line has 128 taps.
 
 ![Delay Line Logic](./resources/delay_line_logic.png)
 
+*Figure 5: Delay Line Logic*
+
 ### FPGA Layout / Floorplanning
 The layout of the FPGA is shown in Figure 6. The placement of the elements in the delay line has been constrained to the lower left corner. Adjacent taps in the delay line are placed in neighboring BELs.
 
 ![FPGA Layout View: a) complete FPGA)](./resources/fpga_layout.png)
 ![b) Delay Line (lower left corner)](./resources/fpga_layout_delayline.png)
+
+*Figure 6: a) complete FPGA, b) Delay Line (lower left corner)*
 
 ### FPGA Resources
 53% of the FPGA's Logic Cells are occupied.
@@ -187,23 +199,29 @@ The test cases are defined in `TofTestCases.py`. The test can be run from `TofTe
 
 
 ## Results
-First, the FPGA is configured to record the output of the ring oscillator. Because the trigger input into the delay line from the ring oscillator is completely independent of the 40 MHz clock, stochastic methods can be applied. The distribution of the trigger with respect to the 40 MHz clock is measured with the delay line and saved in a histogram. The histogram is shown in Figure 8 a). We see that the distribution is quite non-uniform, with counts ranging from 25,000 to 42,000. Thus, calibration will be essential. Note that the number of counts recorded per tap is proportional to the delay of the signal in this tap. The delay per tap is shown in Figure 8 b), and the calculation of the values is explained later.
+First, the FPGA is configured to record the output of the ring oscillator. Because the trigger input into the delay line from the ring oscillator is completely independent of the 40 MHz clock, stochastic methods can be applied. The distribution of the trigger with respect to the 40 MHz clock is measured with the delay line and saved in a histogram. The histogram is shown in Figure 7 a). We see that the distribution is quite non-uniform, with counts ranging from 25,000 to 42,000. Thus, calibration will be essential. Note that the number of counts recorded per tap is proportional to the delay of the signal in this tap. The delay per tap is shown in Figure 8 b), and the calculation of the values is explained later.
 
 ![a) Histogram distribution with input from ring oscillator](./resources/histogram_random.png), ![b) corresponding delay per tap](./resources/delay_random.png)
 
+*Figure 7: a) Histogram distribution with input from ring oscillator, b) corresponding delay per tap*
+
 ### Calibration
-In a second step, the ring oscillator is deactivated, and the signal from the IO TrigIn is received. The trigger signal at the FPGA output and the delayed version at the input are measured and shown in Figure 9.
+In a second step, the ring oscillator is deactivated, and the signal from the IO TrigIn is received. The trigger signal at the FPGA output and the delayed version at the input are measured and shown in Figure 8.
 
 ![a) TrigIn and TrigOut signals](./resources/oscilloscope_triggered.jpg) ![, b) histogram](./resources/histogram_triggered.png)
 
+*Figure 8: a) TrigIn and TrigOut signals, b) corresponding histogram*
+
 In order to measure the time between pulses, an additional histogram is generated, which shows several pulses. This can be achieved by configuring the filter entity accordingly. These pulses are actually the same rising edge of the TrigIn signal but sampled at several clock cycles. These clock cycles are 1/40 MHz = 12.5 ns apart. We can now process this histogram and measure the number of (integer and fractional) taps between the mean of two consecutive pulses. Because the tap delay is not constant, this is not very accurate. Instead, we calculate the number of counts during this period (12.5 ns) from Figure 8 a). The fractional part of the pulse positions is considered as well. We now have the delay per count and can produce Figure 8 b). The known delay per tap is now used to calibrate each measurement of the TDC. See `TofProcessing.py` for the complete calibration and measurement algorithm.
 
-If we have a closer look at Figure 9 a), we can see an interesting phenomenon: the pulses get broader as they travel down the delay line. This can be explained by the additional timing jitter each tap delay element introduces. The jitter adds up (RMS) and gets larger the more taps are traversed.
+If we have a closer look at Figure 8 b), we can see an interesting phenomenon: the pulses get broader as they travel down the delay line. This can be explained by the additional timing jitter each tap delay element introduces. The jitter adds up (RMS) and gets larger the more taps are traversed.
 
 ### Delay Sweep Measurements
 To measure the performance of the TDC, a delay sweep is performed. For each delay setting of the external variable delay, the measured delay by the TDC is recorded. The delay code is swept from 0-141, corresponding to 0 ns - 35 ns. The result is shown in Figure 10 a). Because the external variable delay chip has integral non-linearity up to +/- 1 ns (see DS1023 [6]) itself, the data is offset and gain corrected for further processing.
 
 ![a) raw values](./resources/delay_settings_vs_delay_code.png) ![, b) corrected by gain and offset](./resources/delay_settings_vs_delay_measured.png)
+
+*Figure 9: a) Raw values, b) corrected by gain and offset*
 
 In Figure 11, the difference between two consecutive delay settings is shown, which corresponds to the step size. The offset and gain-corrected data has been used. We can make the following observations:
 
