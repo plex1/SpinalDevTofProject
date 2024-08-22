@@ -223,18 +223,23 @@ To measure the performance of the TDC, a delay sweep is performed. For each dela
 
 *Figure 9: a) Raw values, b) corrected by gain and offset*
 
-In Figure 11, the difference between two consecutive delay settings is shown, which corresponds to the step size. The offset and gain-corrected data has been used. We can make the following observations:
+In Figure 10, the difference between two consecutive delay settings is shown, which corresponds to the step size. The offset and gain-corrected data has been used. We can make the following observations:
 
 - On average, the difference is 250 ps, which corresponds to the step size of the DS1023.
 - There is a repeating pattern where the difference is greater for every 8th step (every 2 ns). This corresponds to the structure within the DS1023 chip, where there is a distinction between fixed array elements, which are 2 ns, and the ‘SubDAC’ which provides the 0.25 ns resolution [6].
 - The tap size fluctuates greatly. However, the values are still in accordance with the data sheet (delay step size = 0..0.75 ns).
 - The same measurement has been performed twice (a) and b)). The two data sets show a very close match, which proves that the measurements are very repeatable.
 
-![Step time measured with TDC a) measurement 1, b) measurement 2](figure11.png)
+![Step time measured with TDC a) measurement 1](./resources/step_measurement_1.png)
+![Step time measured with TDC b) measurement 2](./resources/step_measurement_2.png)
+
+*Figure 10: Step time measured with TDC a) measurement 1, b) measurement 2, showing very close results*
 
 The measurement error, i.e., the deviation between the measured values and a straight line drawn between the step zero value and the maximum programmed delay time, has also been calculated and plotted in Figure 12. We see that the values are mostly within +/- 250 ps, where most of the error is probably coming from our reference, the DS1023 chip.
 
-![Measurement error for different delays](figure12.png)
+![Measurement error for different delays](./resources/step_measurement_error_of_DS1023.png)
+
+*Figure 11: measured error for different delay settings of the DS1023 chip*
 
 ## Script Output
 The test script summary output is shown below. All tests have passed.
