@@ -27,7 +27,6 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 ./project.bash run -n SpinalDevTofProject -t soc -a fwtest     # run testbench (needs sw binary)
 ```
 
-
 ## Remarks
 
 - This repos was adopted from [SpinalDevTemplateSoc](https://github.com/plex1/SpinalDevTemplateSoc)
@@ -37,9 +36,6 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_copy
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_prog
 ```
-
-# Purpose and Scope
-The purpose of this document is to describe the design of a time-to-digital converter implemented in an FPGA.
 
 # Introduction
 A time-to-digital converter (TDC) is a device that converts a time difference into a digital value. Logic elements, chain structures, and registers in FPGA can be used to perform such a time-to-digital conversion [1]-[3]. The uneven bin size in FPGAs causes large differential non-linearities (DNL), a major issue in FPGA TDCs, but this can be solved with calibration [2]. This document provides a description of the FPGA design, including control software, test setup, and results.
