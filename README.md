@@ -2,11 +2,11 @@
 
 This repository includes the code for a FPGA on the [ioda_lidar](https://github.com/plex1/ioda_lidar) project. 
 - Logicware
-  - RiscV (([VexRiscv](https://github.com/SpinalHDL/VexRiscv))) softcore CPU
+  - RiscV ([VexRiscv](https://github.com/SpinalHDL/VexRiscv)) softcore CPU
   - Time-of-flight 
      - start pulse generation
      - time-to-digital converter based propagation delay of look-up-tables (LUTs)
-     - histogram of deteccted delays
+     - histogram of detected delays
 - Embedded software (on RiscV)
    - Protocol (Gepin) which forwards read and write request from UART to the internal bus (mainly to the  time-of-flight logic)
 
@@ -23,7 +23,7 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 3. Run project specific actions
 ```
 ./project.bash run -n SpinalDevTofProject -t soc -a fwcompile  # compile hdl and generate verilog
-./project.bash run -n SpinalDevTofProject -t soc -a swbuild    # build sw and and genrate binary
+./project.bash run -n SpinalDevTofProject -t soc -a swbuild    # build sw and and generate binary
 ./project.bash run -n SpinalDevTofProject -t soc -a fwtest     # run testbench (needs sw binary)
 ```
 
@@ -32,7 +32,7 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 
 - This repos was adopted from [SpinalDevTemplateSoc](https://github.com/plex1/SpinalDevTemplateSoc)
 - Tested on [FPGA board (Olimex)](https://www.olimex.com/Products/FPGA/iCE40/iCE40HX8K-EVB/open-source-hardware)
-- Programming and debugging of FPGA/SW has been done with a Raspberry Pi, see [raspice40](https://github.com/plex1/raspice40). The follwing commands have been used:
+- Programming and debugging of FPGA/SW has been done with a Raspberry Pi, see [raspice40](https://github.com/plex1/raspice40). The following commands have been used:
 ```
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_copy
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_prog
