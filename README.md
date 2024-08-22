@@ -36,6 +36,17 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_copy
 ./project.bash run -n SpinalDevTofProject -t soc -a configfile_prog
 ```
+- Documentation and desriptor files for the control and status registers for the APB interface are auto generated. Below the corresponding excerpt from [TofPeripheral.scala](./fw/hdl/src/main/scala/TofPeripheral.scala). More info is also available [here](https://github.com/plex1/memoryMapProcessing).
+```
+  // generate documentation output
+  val csrp = new CsrProcessing(busCtrl, CsrProcessingConfig("TofPeripheral",
+    "Peripheral for measuring time-of-flight with a TDC implemented in FPGA logic",0xF0030000l))
+  csrp.writeCsrFile("TofPeripheral.cheby", "cheby")
+  csrp.writeCsrFile("TofPeripheral.json", "json_csrp")
+  csrp.writeCsrFile("TofPeripheral.yaml", "yaml_csrp")
+  csrp.writeCsrFile("TofPeripheral_cheby.json", "json_cheby")
+  csrp.writeCsrFile("TofPeripheral_cheby.yaml", "yaml_cheby")
+```
 
 # Introduction
 A time-to-digital converter (TDC) is a device that converts a time difference into a digital value. Logic elements, chain structures, and registers in FPGA can be used to perform such a time-to-digital conversion [1]-[3]. The uneven bin size in FPGAs causes large differential non-linearities (DNL), a major issue in FPGA TDCs, but this can be solved with calibration [2]. This document provides a description of the FPGA design, including control software, test setup, and results.
