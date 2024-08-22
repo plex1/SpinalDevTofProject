@@ -2,7 +2,7 @@
 
 This repository includes the code for a FPGA on the [ioda_lidar](https://github.com/plex1/ioda_lidar) project. 
 - Logicware
-  - RiscV (VexRisc) softcore CPU
+  - RiscV (([VexRiscv](https://github.com/SpinalHDL/VexRiscv))) softcore CPU
   - Time-of-flight 
      - start pulse generation
      - time-to-digital converter based propagation delay of look-up-tables (LUTs)
@@ -10,6 +10,7 @@ This repository includes the code for a FPGA on the [ioda_lidar](https://github.
 - Embedded software (on RiscV)
    - Protocol (Gepin) which forwards read and write request from UART to the internal bus (mainly to the  time-of-flight logic)
 
+*Note that the FPGA logic has been programmed in [SpinalHDL](https://github.com/SpinalHDL/SpinalHDL) and [Yosys](https://github.com/YosysHQ/yosys) & [NextPnR](https://github.com/YosysHQ/nextpnr) have been used for synthesis and place-and-route.*
 
 ## Compilation and testing
 
@@ -216,7 +217,7 @@ If we have a closer look at Figure 8 b), we can see an interesting phenomenon: t
 ### Delay Sweep Measurements
 To measure the performance of the TDC, a delay sweep is performed. For each delay setting of the external variable delay, the measured delay by the TDC is recorded. The delay code is swept from 0-141, corresponding to 0 ns - 35 ns. Due to additional delays in the system, the measured delay has an offset. The result is shown in Figure 10 a). Because the external variable delay chip has integral non-linearity up to +/- 1 ns (see DS1023 [5]) itself, the data is offset and gain corrected for further processing.
 
-![a) raw values](./resources/delay_settings_vs_delay_code.png) ![, b) corrected by gain and offset](./resources/delay_settings_vs_delay_measured.png)
+![a) raw values](./resources/delay_settings_vs_delay_measured_raw.png) ![, b) corrected by gain and offset](./resources/delay_settings_vs_delay_measured_corrected.png)
 
 *Figure 9: a) Raw values, b) corrected by gain and offset*
 
