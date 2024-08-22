@@ -38,7 +38,7 @@ git clone https://github.com/plex1/SpinalDevTofProject.git
 ```
 
 # Purpose and Scope
-The purpose of this document is to describe the design of a time-to-digital converter implemented in an FPGA. It may be implemented in an ASIC at a later stage.
+The purpose of this document is to describe the design of a time-to-digital converter implemented in an FPGA.
 
 # Introduction
 A time-to-digital converter (TDC) is a device that converts a time difference into a digital value. Logic elements, chain structures, and registers in FPGA can be used to perform such a time-to-digital conversion [1]-[3]. The uneven bin size in FPGAs causes large differential non-linearities (DNL), a major issue in FPGA TDCs, but this can be solved with calibration [2]. This document provides a description of the FPGA design, including control software, test setup, and results.
@@ -59,13 +59,13 @@ The separate units are described in Table 1. A photo of the setup is shown in Fi
 | RPi3            | Raspberry Pi 3 Model B/ARM Cortex-A53/q |
 | FPGA Board      | iCE40HX8K-EVB                       |
 | Proto-Board     | Prototyping Board                   |
-| TofUpgrade PCB  | See Project Report: Time-of-flight upgrade |
+| TofUpgrade PCB  | Time-of-flight transceiver, precursor of [ToFPCB](https://github.com/plex1/Tof_PCB)|
 
 *Table 1: Units in System Setup*
 
 ![Photo of the setup](./resources/foto_setup.png)
 
-*Figure 2: Photo of setup*
+*Figure 2: Photo of setup (electro-optical part not used for tests described here)*
 
 ## PC
 ### Design Software
@@ -88,7 +88,7 @@ The following software is installed:
 - OpenOCD RiscV: [OpenOCD RiscV](https://github.com/SpinalHDL/openocd_riscv), using git commit `7aef0a`, Jan 2 2019, due to compatibility issues with the latest version.
 
 ## FPGA Board
-The FPGA development board iCE40HX8K-EVB from Olimex is used. The content of the FPGA configuration can be found here: [SpinalDevTof](https://github.com/plex1/SpinalDevTof). Included are:
+The FPGA development board iCE40HX8K-EVB from Olimex is used. The content of the FPGA configuration are:
 
 - FPGA logic-ware
 - Soft core RiscV processor ([VexRiscv](https://github.com/SpinalHDL/VexRiscv))
@@ -161,13 +161,10 @@ The layout of the FPGA is shown in Figure 6. The placement of the elements in th
 The timing has to be rechecked. Due to the delay line, the timing of the main clock is no longer checked. It was not possible with the nextpnr toolchain to set the delay line as a false path or to look at the second fastest path. Without the delay line, the performance is around 50 MHz according to nextpnr timing analysis. The main clock has a frequency of 40 MHz. Thus there is a 10 MHz margin. The delay line has a total maximum delay of 137 ns.
 
 ### Testing
-A testbench has been written to check its functionality. The logic is controlled by writing and reading via the Control and Status interface (Gepin). In the testbench, the embedded system with software is running, and the FPGA logic is running concurrently, allowing for complete data and control flow testing.
+A testbench has been written to check its functionality. The logic is controlled by writing and reading via the Control and Status interface (Gepin). In the testbench, the embedded system with software is running, and the FPGA logic is running concurrently, allowing for complete data and control flow testing. It is executed with Verilator simulation tool.
 
 ## Drivers
-A TinyLogic UHS Dual Buffer NC7WZ16 IC was used as a driver. A 50 Ohms resistor was placed at the output (output impedance). The circuit can drive a 50 Ohms load. A 50 Ohms resistor was used as a termination resistor.
-
-## TOF Upgrade PCB
-See [5] for more details on this PCB. For the purpose of this document, only the delay-line functionality of the PCB is used.
+A TinyLogic UHS Dual Buffer NC7WZ16 IC was used as a driver. A 50 Ohms resistor was placed at the output (output impedance). The circuit can drive a 50 Ohms load. A 50 Ohms resistor was used as a termination resistor. See [Signal Driver PCB](https://github.com/plex1/ice40_driver_pcb),
 
 ### Variable Delay Chip
 A DS1023, 8-Bit Programmable Timing Element, chip is present on the board. This chip can vary the delay from 0-64 ns with a step size of 0.25 ns. This allows for convenient automated testing of the FPGA TDC.
@@ -199,7 +196,7 @@ The test cases are defined in `TofTestCases.py`. The test can be run from `TofTe
 
 
 ## Results
-First, the FPGA is configured to record the output of the ring oscillator. Because the trigger input into the delay line from the ring oscillator is completely independent of the 40 MHz clock, stochastic methods can be applied. The distribution of the trigger with respect to the 40 MHz clock is measured with the delay line and saved in a histogram. The histogram is shown in Figure 7 a). We see that the distribution is quite non-uniform, with counts ranging from 25,000 to 42,000. Thus, calibration will be essential. Note that the number of counts recorded per tap is proportional to the delay of the signal in this tap. The delay per tap is shown in Figure 8 b), and the calculation of the values is explained later.
+First, the FPGA is configured to record the output of the ring oscillator. Because the trigger input into the delay line from the ring oscillator is completely independent of the 40 MHz clock, stochastic methods can be applied. The distribution of the trigger with respect to the 40 MHz clock is measured with the delay line and saved in a histogram. The histogram is shown in Figure 7 a). We see that the distribution is quite non-uniform, with counts ranging from 25,000 to 42,000. Thus, calibration will be essential. Note that the number of counts recorded per tap is proportional to the delay of the signal in this tap. The delay per tap is shown in Figure 8 b), and the calculation of the values is explained below.
 
 ![a) Histogram distribution with input from ring oscillator](./resources/histogram_random.png), ![b) corresponding delay per tap](./resources/delay_random.png)
 
@@ -212,29 +209,34 @@ In a second step, the ring oscillator is deactivated, and the signal from the IO
 
 *Figure 8: a) TrigIn and TrigOut signals, b) corresponding histogram*
 
-In order to measure the time between pulses, an additional histogram is generated, which shows several pulses. This can be achieved by configuring the filter entity accordingly. These pulses are actually the same rising edge of the TrigIn signal but sampled at several clock cycles. These clock cycles are 1/40 MHz = 12.5 ns apart. We can now process this histogram and measure the number of (integer and fractional) taps between the mean of two consecutive pulses. Because the tap delay is not constant, this is not very accurate. Instead, we calculate the number of counts during this period (12.5 ns) from Figure 8 a). The fractional part of the pulse positions is considered as well. We now have the delay per count and can produce Figure 8 b). The known delay per tap is now used to calibrate each measurement of the TDC. See `TofProcessing.py` for the complete calibration and measurement algorithm.
+In order to measure the time between pulses, an additional histogram is generated, which shows several pulses. This can be achieved by configuring the filter entity accordingly. These pulses are actually the same rising edge of the TrigIn signal but sampled at several clock cycles. These clock cycles are 1/40 MHz = 12.5 ns apart. We can now process this histogram and measure the number of (integer and fractional) taps between the mean of two consecutive pulses. Because the tap delay is not constant, this is not very accurate. Instead, we calculate the number of counts during this period (12.5 ns) from Figure 7 a). The fractional part of the pulse positions is considered as well. We now have the delay per count and can produce Figure 7 b). The known delay per tap is now used to calibrate each measurement of the TDC. See `TofProcessing.py` in [ioda_control_sw](https://github.com/plex1/ioda_control_sw) for the complete calibration and measurement algorithm.
 
 If we have a closer look at Figure 8 b), we can see an interesting phenomenon: the pulses get broader as they travel down the delay line. This can be explained by the additional timing jitter each tap delay element introduces. The jitter adds up (RMS) and gets larger the more taps are traversed.
 
 ### Delay Sweep Measurements
-To measure the performance of the TDC, a delay sweep is performed. For each delay setting of the external variable delay, the measured delay by the TDC is recorded. The delay code is swept from 0-141, corresponding to 0 ns - 35 ns. The result is shown in Figure 10 a). Because the external variable delay chip has integral non-linearity up to +/- 1 ns (see DS1023 [6]) itself, the data is offset and gain corrected for further processing.
+To measure the performance of the TDC, a delay sweep is performed. For each delay setting of the external variable delay, the measured delay by the TDC is recorded. The delay code is swept from 0-141, corresponding to 0 ns - 35 ns. Due to additional delays in the system, the measured delay has an offset. The result is shown in Figure 10 a). Because the external variable delay chip has integral non-linearity up to +/- 1 ns (see DS1023 [5]) itself, the data is offset and gain corrected for further processing.
 
 ![a) raw values](./resources/delay_settings_vs_delay_code.png) ![, b) corrected by gain and offset](./resources/delay_settings_vs_delay_measured.png)
 
 *Figure 9: a) Raw values, b) corrected by gain and offset*
 
-In Figure 11, the difference between two consecutive delay settings is shown, which corresponds to the step size. The offset and gain-corrected data has been used. We can make the following observations:
+In Figure 10, the difference between two consecutive delay settings is shown, which corresponds to the step size. The offset and gain-corrected data has been used. We can make the following observations:
 
 - On average, the difference is 250 ps, which corresponds to the step size of the DS1023.
 - There is a repeating pattern where the difference is greater for every 8th step (every 2 ns). This corresponds to the structure within the DS1023 chip, where there is a distinction between fixed array elements, which are 2 ns, and the ‘SubDAC’ which provides the 0.25 ns resolution [6].
 - The tap size fluctuates greatly. However, the values are still in accordance with the data sheet (delay step size = 0..0.75 ns).
 - The same measurement has been performed twice (a) and b)). The two data sets show a very close match, which proves that the measurements are very repeatable.
 
-![Step time measured with TDC a) measurement 1, b) measurement 2](figure11.png)
+![Step time measured with TDC a) measurement 1](./resources/step_measurement_1.png)
+![Step time measured with TDC b) measurement 2](./resources/step_measurement_2.png)
 
-The measurement error, i.e., the deviation between the measured values and a straight line drawn between the step zero value and the maximum programmed delay time, has also been calculated and plotted in Figure 12. We see that the values are mostly within +/- 250 ps, where most of the error is probably coming from our reference, the DS1023 chip.
+*Figure 10: Step time measured with TDC a) measurement 1, b) measurement 2, showing very close results*
 
-![Measurement error for different delays](figure12.png)
+The measurement error, i.e., the deviation between the measured values and a straight line drawn between the step zero value and the maximum programmed delay time, has also been calculated and plotted in Figure 11. We see that the values are mostly within +/- 250 ps, where most of the error is probably coming from our reference, the DS1023 chip.
+
+![Measurement error for different delays](./resources/step_measurement_error_of_DS1023.png)
+
+*Figure 11: measured error for different delay settings of the DS1023 chip*
 
 ## Script Output
 The test script summary output is shown below. All tests have passed.
@@ -276,8 +278,7 @@ We have demonstrated a TDC within an FPGA with an accuracy of better than +/- 25
 [2] J. Wu, Z. Shi, The 10ps Wave Union TDC: Improving FPGA TDC Resolution beyond Its Cell Delay  
 [3] C. Liu, Y. Wang, A 128-Channel, 710 M Samples/Second, and Less 10 ps RMS Resolution Time-to-Digital Converter Implemented in a Kintex-7 FPGA  
 [4] LATTICE ICE™ Technology Library Version 2.9 March 23, 2015.  
-[5] Project: Time-of-Flight Upgrade, Documentation  
-[6] DS1023, 8-Bit Programmable Timing Element, Data Sheet
+[5] DS1023, 8-Bit Programmable Timing Element, Data Sheet
 
 
 
