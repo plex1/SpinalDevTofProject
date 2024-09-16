@@ -1,11 +1,11 @@
-# SpinalDevTofProject
+# SpinalDevTofProject - Time-to-digital Converter in Lattice iCE40 FPGA
 
 This repository includes the code for the FPGA in the [ioda_lidar](https://github.com/plex1/ioda_lidar) project:
 - Logicware
   - RiscV ([VexRiscv](https://github.com/SpinalHDL/VexRiscv)) softcore CPU
   - Time-of-flight 
      - start pulse generation
-     - time-to-digital converter based propagation delay of look-up-tables (LUTs)
+     - time-to-digital converter based on propagation delay of look-up-tables (LUTs)
      - histogram of detected delays
 - Embedded software (on RiscV)
    - Protocol (Gepin) which forwards read and write request from UART to the internal bus (mainly to the  time-of-flight logic)
