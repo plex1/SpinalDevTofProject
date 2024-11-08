@@ -1,3 +1,5 @@
+[![Build Status](https://app.travis-ci.com/plex1/SpinalDevTofProject.svg?token=G4rzeyv4qGgjAhoWzvQy&branch=master)](https://app.travis-ci.com/plex1/SpinalDevTofProject)
+
 # SpinalDevTofProject - Time-to-digital Converter in Lattice iCE40 FPGA
 
 This repository includes the code for the FPGA in the [ioda_lidar](https://github.com/plex1/ioda_lidar) project:
